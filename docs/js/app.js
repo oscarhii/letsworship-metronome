@@ -1,11 +1,14 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const audio = new MetronomeAudioEngine();
-  const sync = new MetronomeSyncEngine(audio);
-
   // URL parameters helper
   const urlParams = new URLSearchParams(window.location.search);
   const initialRoom = urlParams.get('room') || 'MAIN';
-  const initialMode = urlParams.get('mode') || (window.location.protocol.startsWith('http') ? 'websocket' : 'webrtc');
+  
+  // Auto-detect mode: If hosted on GitHub Pages / Vercel / static PWA, default to WebRTC.
+  // If running locally on localhost/IP port 3000, default to local WebSocket.
+  const isLocalServer = window.location.hostname === 'localhost' || 
+                        window.location.hostname === '127.0.0.1' || 
+                        window.location.port === '3000';
+                        
+  const initialMode = urlParams.get('mode') || (isLocalServer ? 'websocket' : 'webrtc');
 
   // DOM Elements
   const bpmDisplay = document.getElementById('bpm-display');

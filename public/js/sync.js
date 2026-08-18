@@ -94,17 +94,27 @@ class MetronomeSyncEngine {
   // 1. WebRTC Peer-to-Peer Mode (Zero Server)
   // ==========================================
   initWebRTC() {
-    const hostPeerId = `SYNCBEAT_${this.roomId}_HOST`;
-    const clientPeerId = `SYNCBEAT_${this.roomId}_${this.deviceId}`;
+    const cleanRoom = (this.roomId || 'MAIN').replace(/[^a-zA-Z0-9_-]/g, '').toUpperCase() || 'MAIN';
+    const hostPeerId = `SYNCBEAT_${cleanRoom}_HOST`;
+    const clientPeerId = `SYNCBEAT_${cleanRoom}_DEV_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+    const peerOptions = {
+      debug: 1,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:global.stun.twilio.com:3478' }
+        ]
+      }
+    };
 
     // First attempt to become the Host for this Room
     try {
-      this.peer = new Peer(hostPeerId, {
-        debug: 1
-      });
+      this.peer = new Peer(hostPeerId, peerOptions);
 
       this.peer.on('open', (id) => {
-        // Successfully became Host!
+        // Successfully registered as Host!
         this.isHost = true;
         this.isConnected = true;
         this.clockOffset = 0;
@@ -115,16 +125,20 @@ class MetronomeSyncEngine {
       });
 
       this.peer.on('connection', (conn) => {
-        // New client joined host
+        // A peer connected to this Host
         this.setupHostClientConnection(conn);
       });
 
       this.peer.on('error', (err) => {
-        // If Host ID is already taken, connect as Client!
+        // If Host ID is already registered by another phone, connect as Client!
         if (err.type === 'unavailable-id') {
-          this.connectAsWebRTCClient(hostPeerId, clientPeerId);
+          this.connectAsWebRTCClient(hostPeerId, clientPeerId, peerOptions);
         } else {
-          console.warn('PeerJS warning:', err);
+          console.warn('PeerJS status/warning:', err);
+          // If already open, keep connected state
+          if (this.peer && !this.peer.destroyed && this.peer.open) {
+            this.isConnected = true;
+          }
         }
       });
     } catch (e) {
@@ -132,12 +146,12 @@ class MetronomeSyncEngine {
     }
   }
 
-  connectAsWebRTCClient(hostPeerId, clientPeerId) {
+  connectAsWebRTCClient(hostPeerId, clientPeerId, peerOptions) {
     if (this.peer) {
       try { this.peer.destroy(); } catch (e) {}
     }
 
-    this.peer = new Peer(clientPeerId, { debug: 1 });
+    this.peer = new Peer(clientPeerId, peerOptions);
 
     this.peer.on('open', () => {
       this.hostConn = this.peer.connect(hostPeerId, { reliable: true });
@@ -146,15 +160,20 @@ class MetronomeSyncEngine {
         this.isHost = false;
         this.isConnected = true;
 
-        // Perform initial clock sync
+        // Run initial clock sync
         this.runWebRTCClockSync(() => {
-          this.hostConn.send({
-            type: 'REQUEST_ROOM_STATE',
-            payload: { deviceId: this.deviceId }
-          });
+          if (this.hostConn && this.hostConn.open) {
+            this.hostConn.send({
+              type: 'REQUEST_ROOM_STATE',
+              payload: { deviceId: this.deviceId }
+            });
+          }
         });
 
         this.startPeriodicWebRTCSync();
+        if (this.onConnectionChange) {
+          this.onConnectionChange(true, 2, this.rtt, false);
+        }
       });
 
       this.hostConn.on('data', (data) => {
@@ -166,8 +185,8 @@ class MetronomeSyncEngine {
         if (this.onConnectionChange) {
           this.onConnectionChange(false, 1, 0, false);
         }
-        // If host left, retry becoming host after 1 second
-        setTimeout(() => this.init(this.roomId, 'webrtc'), 1000);
+        // If host disconnected, try taking over as host after 1.5s
+        setTimeout(() => this.init(this.roomId, 'webrtc'), 1500);
       });
     });
 
