@@ -1,21 +1,18 @@
 /**
- * High-Precision Multi-Mode Synchronization Engine
- * Supports:
- * 1. WebRTC Peer-to-Peer (Serverless / Standalone PWA - zero server required)
- * 2. Local WebSocket Hub (Direct Wi-Fi server)
+ * High-Precision Universal Synchronization Engine
+ * Uses Ultra-Fast WSS PubSub / MQTT for seamless cross-network & cross-device beat sync.
  */
 class MetronomeSyncEngine {
   constructor(audioEngine) {
     this.audio = audioEngine;
-    this.mode = 'webrtc'; // 'webrtc' or 'websocket'
     this.roomId = 'MAIN';
-    this.deviceId = 'DEV_' + Math.random().toString(36).substring(2, 7).toUpperCase();
-    this.isHost = false;
+    this.deviceId = 'DEV_' + Math.random().toString(36).substring(2, 8).toUpperCase();
     this.isConnected = false;
     this.deviceCount = 1;
+    this.peerPresence = new Map();
 
     // Time synchronization
-    this.clockOffset = 0; // HostTime = Date.now() + clockOffset
+    this.clockOffset = 0;
     this.rtt = 0;
     this.syncSamples = [];
     this.isSynced = false;
@@ -37,13 +34,9 @@ class MetronomeSyncEngine {
     this.onStateChange = null;
     this.onConnectionChange = null;
 
-    // WebRTC PeerJS state
-    this.peer = null;
-    this.hostConn = null; // Client -> Host connection
-    this.clientConns = new Map(); // Host -> Map of Client connections
-
-    // WebSocket state
-    this.ws = null;
+    // Client instance
+    this.mqttClient = null;
+    this.presenceTimer = null;
 
     this.lastVisualBeat = -1;
     this.animationFrameId = null;
@@ -53,469 +46,249 @@ class MetronomeSyncEngine {
     return Date.now() + this.clockOffset;
   }
 
-  setMode(mode) {
-    this.mode = mode;
-  }
-
-  init(roomId = 'MAIN', mode = null) {
-    if (mode) this.mode = mode;
-    this.roomId = (roomId || 'MAIN').trim().toUpperCase();
+  init(roomId = 'MAIN') {
+    this.roomId = (roomId || 'MAIN').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+    if (!this.roomId) this.roomId = 'MAIN';
 
     this.cleanup();
-
-    if (this.mode === 'websocket') {
-      this.initWebSocket();
-    } else {
-      this.initWebRTC();
-    }
+    this.initCloudPubSub();
   }
 
   cleanup() {
-    if (this.ws) {
-      try { this.ws.close(); } catch (e) {}
-      this.ws = null;
+    if (this.mqttClient) {
+      try {
+        this.mqttClient.end(true);
+      } catch (e) {}
+      this.mqttClient = null;
     }
-    if (this.peer) {
-      try { this.peer.destroy(); } catch (e) {}
-      this.peer = null;
+    if (this.presenceTimer) {
+      clearInterval(this.presenceTimer);
+      this.presenceTimer = null;
     }
     if (this.periodicSyncInterval) {
       clearInterval(this.periodicSyncInterval);
       this.periodicSyncInterval = null;
     }
-    this.hostConn = null;
-    this.clientConns.clear();
+    this.peerPresence.clear();
     this.isConnected = false;
-    this.isHost = false;
     this.deviceCount = 1;
   }
 
   // ==========================================
-  // 1. WebRTC Peer-to-Peer Mode (Zero Server)
+  // Cloud WSS PubSub Synchronization
   // ==========================================
-  initWebRTC() {
-    const cleanRoom = (this.roomId || 'MAIN').replace(/[^a-zA-Z0-9_-]/g, '').toUpperCase() || 'MAIN';
-    const hostPeerId = `SYNCBEAT_${cleanRoom}_HOST`;
-    const clientPeerId = `SYNCBEAT_${cleanRoom}_DEV_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  initCloudPubSub() {
+    // Primary public brokers with fallback
+    const brokerUrls = [
+      'wss://broker.emqx.io:8084/mqtt',
+      'wss://broker.hivemq.com:8884/mqtt'
+    ];
+    const brokerUrl = brokerUrls[0];
 
-    const peerOptions = {
-      debug: 1,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:global.stun.twilio.com:3478' }
-        ]
-      }
-    };
+    const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+    const topicPresence = `letsworship/metronome/v1/${this.roomId}/presence`;
 
-    // First attempt to become the Host for this Room
     try {
-      this.peer = new Peer(hostPeerId, peerOptions);
-
-      this.peer.on('open', (id) => {
-        // Successfully registered as Host!
-        this.isHost = true;
+      if (typeof mqtt === 'undefined') {
+        console.warn('MQTT library not loaded, running in standalone mode.');
         this.isConnected = true;
-        this.clockOffset = 0;
+        if (this.onConnectionChange) this.onConnectionChange(true, 1, 0);
+        return;
+      }
+
+      this.mqttClient = mqtt.connect(brokerUrl, {
+        clientId: `sync_${this.deviceId}`,
+        clean: true,
+        connectTimeout: 4000,
+        keepalive: 30
+      });
+
+      this.mqttClient.on('connect', () => {
+        this.isConnected = true;
         this.deviceCount = 1;
+
+        this.mqttClient.subscribe([topicRoom, topicPresence], (err) => {
+          if (!err) {
+            // Announce presence
+            this.sendPresence();
+            // Start periodic presence heartbeat
+            this.startPresenceHeartbeat();
+            // Run initial clock sync ping
+            this.sendPing();
+          }
+        });
+
         if (this.onConnectionChange) {
-          this.onConnectionChange(true, this.deviceCount, 0, true);
+          this.onConnectionChange(true, this.deviceCount, this.rtt);
         }
       });
 
-      this.peer.on('connection', (conn) => {
-        // A peer connected to this Host
-        this.setupHostClientConnection(conn);
+      this.mqttClient.on('message', (topic, messageBuffer) => {
+        try {
+          const msg = JSON.parse(messageBuffer.toString());
+          this.handleNetworkMessage(topic, msg);
+        } catch (e) {
+          console.warn('Error parsing message:', e);
+        }
       });
 
-      this.peer.on('error', (err) => {
-        // If Host ID is already registered by another phone, connect as Client!
-        if (err.type === 'unavailable-id') {
-          this.connectAsWebRTCClient(hostPeerId, clientPeerId, peerOptions);
-        } else {
-          console.warn('PeerJS status/warning:', err);
-          // If already open, keep connected state
-          if (this.peer && !this.peer.destroyed && this.peer.open) {
-            this.isConnected = true;
-          }
+      this.mqttClient.on('error', (err) => {
+        console.warn('MQTT connection warning:', err);
+      });
+
+      this.mqttClient.on('offline', () => {
+        this.isConnected = false;
+        if (this.onConnectionChange) {
+          this.onConnectionChange(false, 1, 0);
+        }
+      });
+
+      this.mqttClient.on('reconnect', () => {
+        this.isConnected = true;
+        if (this.onConnectionChange) {
+          this.onConnectionChange(true, this.deviceCount, this.rtt);
         }
       });
     } catch (e) {
-      console.error('WebRTC initialization failed:', e);
+      console.error('Failed to initialize sync:', e);
+      this.isConnected = true;
+      if (this.onConnectionChange) this.onConnectionChange(true, 1, 0);
     }
   }
 
-  connectAsWebRTCClient(hostPeerId, clientPeerId, peerOptions) {
-    if (this.peer) {
-      try { this.peer.destroy(); } catch (e) {}
-    }
+  sendPresence() {
+    if (!this.mqttClient || !this.mqttClient.connected) return;
+    const topicPresence = `letsworship/metronome/v1/${this.roomId}/presence`;
+    this.mqttClient.publish(topicPresence, JSON.stringify({
+      deviceId: this.deviceId,
+      timestamp: Date.now(),
+      bpm: this.bpm,
+      isPlaying: this.isPlaying
+    }));
+  }
 
-    this.peer = new Peer(clientPeerId, peerOptions);
+  startPresenceHeartbeat() {
+    if (this.presenceTimer) clearInterval(this.presenceTimer);
+    this.presenceTimer = setInterval(() => {
+      this.sendPresence();
 
-    this.peer.on('open', () => {
-      this.hostConn = this.peer.connect(hostPeerId, { reliable: true });
+      // Clean up stale peers (inactive for > 8s)
+      const now = Date.now();
+      for (const [id, lastSeen] of this.peerPresence.entries()) {
+        if (now - lastSeen > 8000) {
+          this.peerPresence.delete(id);
+        }
+      }
+      this.deviceCount = this.peerPresence.size + 1;
+      if (this.onConnectionChange) {
+        this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt);
+      }
+    }, 3000);
+  }
 
-      this.hostConn.on('open', () => {
-        this.isHost = false;
-        this.isConnected = true;
+  sendPing() {
+    if (!this.mqttClient || !this.mqttClient.connected) return;
+    const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+    this.mqttClient.publish(topicRoom, JSON.stringify({
+      type: 'PING',
+      from: this.deviceId,
+      clientSendTime: performance.now()
+    }));
+  }
 
-        // Run initial clock sync
-        this.runWebRTCClockSync(() => {
-          if (this.hostConn && this.hostConn.open) {
-            this.hostConn.send({
-              type: 'REQUEST_ROOM_STATE',
-              payload: { deviceId: this.deviceId }
-            });
-          }
-        });
-
-        this.startPeriodicWebRTCSync();
+  handleNetworkMessage(topic, msg) {
+    // 1. Handle presence updates
+    if (topic.endsWith('/presence')) {
+      if (msg.deviceId && msg.deviceId !== this.deviceId) {
+        this.peerPresence.set(msg.deviceId, Date.now());
+        this.deviceCount = this.peerPresence.size + 1;
         if (this.onConnectionChange) {
-          this.onConnectionChange(true, 2, this.rtt, false);
-        }
-      });
-
-      this.hostConn.on('data', (data) => {
-        this.handlePeerMessage(data);
-      });
-
-      this.hostConn.on('close', () => {
-        this.isConnected = false;
-        if (this.onConnectionChange) {
-          this.onConnectionChange(false, 1, 0, false);
-        }
-        // If host disconnected, try taking over as host after 1.5s
-        setTimeout(() => this.init(this.roomId, 'webrtc'), 1500);
-      });
-    });
-
-    this.peer.on('error', (err) => {
-      console.warn('WebRTC client error:', err);
-    });
-  }
-
-  setupHostClientConnection(conn) {
-    this.clientConns.set(conn.peer, conn);
-    this.deviceCount = this.clientConns.size + 1;
-
-    conn.on('data', (data) => {
-      const { type, payload } = data;
-
-      switch (type) {
-        case 'PING': {
-          conn.send({
-            type: 'PONG',
-            payload: {
-              clientSendTime: payload.clientSendTime,
-              serverReceiveTime: Date.now()
-            }
-          });
-          break;
-        }
-
-        case 'REQUEST_ROOM_STATE': {
-          conn.send({
-            type: 'ROOM_JOINED',
-            payload: {
-              roomId: this.roomId,
-              deviceId: this.deviceId,
-              state: {
-                isPlaying: this.isPlaying,
-                bpm: this.bpm,
-                beatsPerMeasure: this.beatsPerMeasure,
-                startMasterTime: this.startMasterTime,
-                soundType: this.audio.soundType
-              },
-              deviceCount: this.deviceCount
-            }
-          });
-          this.broadcastPeerStats();
-          break;
-        }
-
-        case 'FORWARD_ACTION': {
-          // Client asked to execute action -> host handles & broadcasts
-          this.handleActionFromClient(payload);
-          break;
+          this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt);
         }
       }
-    });
-
-    conn.on('close', () => {
-      this.clientConns.delete(conn.peer);
-      this.deviceCount = this.clientConns.size + 1;
-      this.broadcastPeerStats();
-    });
-
-    if (this.onConnectionChange) {
-      this.onConnectionChange(true, this.deviceCount, 0, true);
+      return;
     }
-  }
 
-  broadcastToPeers(msg) {
-    for (const conn of this.clientConns.values()) {
-      if (conn.open) {
-        conn.send(msg);
-      }
-    }
-  }
-
-  broadcastPeerStats() {
-    this.broadcastToPeers({
-      type: 'ROOM_STATS',
-      payload: { deviceCount: this.deviceCount }
-    });
-    if (this.onConnectionChange) {
-      this.onConnectionChange(true, this.deviceCount, this.rtt, this.isHost);
-    }
-  }
-
-  runWebRTCClockSync(callback) {
-    let pingCount = 0;
-    const totalPings = 6;
-    this.syncSamples = [];
-
-    const sendPing = () => {
-      if (this.hostConn && this.hostConn.open) {
-        this.hostConn.send({
-          type: 'PING',
-          payload: { clientSendTime: performance.now() }
-        });
-      }
-    };
-
-    this.pendingWebRTCPing = (rtt, offset) => {
-      this.syncSamples.push({ rtt, offset });
-      pingCount++;
-      if (pingCount < totalPings) {
-        setTimeout(sendPing, 40);
-      } else {
-        this.syncSamples.sort((a, b) => a.rtt - b.rtt);
-        const best = this.syncSamples[0];
-        this.clockOffset = best.offset;
-        this.rtt = Math.round(best.rtt);
-        this.isSynced = true;
-        this.pendingWebRTCPing = null;
-        if (callback) callback();
-      }
-    };
-
-    sendPing();
-  }
-
-  startPeriodicWebRTCSync() {
-    if (this.periodicSyncInterval) clearInterval(this.periodicSyncInterval);
-    this.periodicSyncInterval = setInterval(() => {
-      if (this.hostConn && this.hostConn.open && !this.isHost) {
-        const clientSendTime = performance.now();
-        this.oneOffPing = (rtt, offset) => {
-          this.clockOffset = this.clockOffset * 0.8 + offset * 0.2;
-          this.rtt = Math.round(rtt);
-          if (this.onConnectionChange) {
-            this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt, this.isHost);
-          }
-          this.oneOffPing = null;
-        };
-        this.hostConn.send({
-          type: 'PING',
-          payload: { clientSendTime }
-        });
-      }
-    }, 5000);
-  }
-
-  handlePeerMessage(msg) {
-    const { type, payload } = msg;
+    // 2. Handle room sync events
+    const { type, from } = msg;
 
     switch (type) {
+      case 'PING': {
+        // If another device pinged, reply with PONG + our clock timestamp
+        if (from !== this.deviceId && this.mqttClient && this.mqttClient.connected) {
+          const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+          this.mqttClient.publish(topicRoom, JSON.stringify({
+            type: 'PONG',
+            to: from,
+            clientSendTime: msg.clientSendTime,
+            serverReceiveTime: Date.now()
+          }));
+        }
+        break;
+      }
+
       case 'PONG': {
-        const clientReceiveTime = performance.now();
-        const rtt = clientReceiveTime - payload.clientSendTime;
-        const approxLocalEpoch = Date.now() - rtt / 2;
-        const offset = payload.serverReceiveTime - approxLocalEpoch;
+        // If PONG is addressed to us, compute NTP clock offset and RTT
+        if (msg.to === this.deviceId) {
+          const clientReceiveTime = performance.now();
+          const rtt = clientReceiveTime - msg.clientSendTime;
+          const approxLocalEpoch = Date.now() - rtt / 2;
+          const offset = msg.serverReceiveTime - approxLocalEpoch;
 
-        if (this.pendingWebRTCPing) {
-          this.pendingWebRTCPing(rtt, offset);
-        } else if (this.oneOffPing) {
-          this.oneOffPing(rtt, offset);
+          // Smooth offset update
+          if (!this.isSynced) {
+            this.clockOffset = offset;
+            this.isSynced = true;
+          } else {
+            this.clockOffset = this.clockOffset * 0.8 + offset * 0.2;
+          }
+          this.rtt = Math.round(rtt);
+          if (this.onConnectionChange) {
+            this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt);
+          }
         }
         break;
       }
 
-      case 'ROOM_JOINED': {
-        this.deviceCount = payload.deviceCount;
-        this.bpm = payload.state.bpm || 120;
-        this.beatsPerMeasure = payload.state.beatsPerMeasure || 4;
-        if (payload.state.soundType) {
-          this.audio.setSoundType(payload.state.soundType);
-        }
-        if (payload.state.isPlaying && payload.state.startMasterTime) {
-          this.startPlayback(payload.state.startMasterTime, this.bpm, this.beatsPerMeasure);
-        }
-        if (this.onStateChange) this.onStateChange();
-        if (this.onConnectionChange) this.onConnectionChange(true, this.deviceCount, this.rtt, this.isHost);
-        break;
-      }
-
-      case 'ROOM_STATS': {
-        this.deviceCount = payload.deviceCount;
-        if (this.onConnectionChange) this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt, this.isHost);
-        break;
-      }
-
-      case 'METRONOME_STARTED': {
-        this.bpm = payload.bpm;
-        this.beatsPerMeasure = payload.beatsPerMeasure;
-        this.startPlayback(payload.startMasterTime, this.bpm, this.beatsPerMeasure);
+      case 'START': {
+        this.bpm = msg.bpm;
+        this.beatsPerMeasure = msg.beatsPerMeasure;
+        this.startPlayback(msg.startMasterTime, this.bpm, this.beatsPerMeasure);
         if (this.onStateChange) this.onStateChange();
         break;
       }
 
-      case 'METRONOME_STOPPED': {
+      case 'STOP': {
         this.stopPlayback();
         if (this.onStateChange) this.onStateChange();
         break;
       }
 
-      case 'TEMPO_UPDATED': {
-        this.bpm = payload.bpm;
-        if (this.isPlaying && payload.startMasterTime) {
-          this.startPlayback(payload.startMasterTime, this.bpm, this.beatsPerMeasure);
+      case 'TEMPO': {
+        this.bpm = msg.bpm;
+        if (this.isPlaying && msg.startMasterTime) {
+          this.startPlayback(msg.startMasterTime, this.bpm, this.beatsPerMeasure);
         }
         if (this.onStateChange) this.onStateChange();
         break;
       }
 
-      case 'BEATS_UPDATED': {
-        this.beatsPerMeasure = payload.beatsPerMeasure;
+      case 'BEATS': {
+        this.beatsPerMeasure = msg.beatsPerMeasure;
         if (this.onStateChange) this.onStateChange();
         break;
       }
 
-      case 'SOUND_UPDATED': {
-        this.audio.setSoundType(payload.soundType);
+      case 'SOUND': {
+        this.audio.setSoundType(msg.soundType);
         if (this.onStateChange) this.onStateChange();
         break;
       }
     }
   }
 
-  handleActionFromClient(action) {
-    const { actionType, data } = action;
-    switch (actionType) {
-      case 'START':
-        this.sendStart(data.bpm, data.beatsPerMeasure);
-        break;
-      case 'STOP':
-        this.sendStop();
-        break;
-      case 'TEMPO':
-        this.sendTempo(data.bpm);
-        break;
-      case 'BEATS':
-        this.sendBeatsPerMeasure(data.beatsPerMeasure);
-        break;
-      case 'SOUND':
-        this.sendSoundType(data.soundType);
-        break;
-    }
-  }
-
   // ==========================================
-  // 2. Local WebSocket Mode (When Local Server Active)
-  // ==========================================
-  initWebSocket() {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}`;
-
-    try {
-      this.ws = new WebSocket(wsUrl);
-
-      this.ws.onopen = () => {
-        this.isConnected = true;
-        this.runWebSocketClockSync(() => {
-          this.ws.send(JSON.stringify({
-            type: 'JOIN_ROOM',
-            payload: { roomId: this.roomId }
-          }));
-        });
-        this.startPeriodicWebSocketSync();
-      };
-
-      this.ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data);
-          this.handlePeerMessage(msg);
-        } catch (e) {}
-      };
-
-      this.ws.onclose = () => {
-        this.isConnected = false;
-        if (this.onConnectionChange) this.onConnectionChange(false, 1, 0, false);
-      };
-    } catch (e) {
-      console.warn('WebSocket init failed:', e);
-    }
-  }
-
-  runWebSocketClockSync(callback) {
-    let pingCount = 0;
-    const totalPings = 8;
-    this.syncSamples = [];
-
-    const sendPing = () => {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        this.ws.send(JSON.stringify({
-          type: 'PING',
-          payload: { clientSendTime: performance.now() }
-        }));
-      }
-    };
-
-    this.pendingWebRTCPing = (rtt, offset) => {
-      this.syncSamples.push({ rtt, offset });
-      pingCount++;
-      if (pingCount < totalPings) {
-        setTimeout(sendPing, 50);
-      } else {
-        this.syncSamples.sort((a, b) => a.rtt - b.rtt);
-        const best = this.syncSamples[0];
-        this.clockOffset = best.offset;
-        this.rtt = Math.round(best.rtt);
-        this.isSynced = true;
-        this.pendingWebRTCPing = null;
-        if (callback) callback();
-      }
-    };
-
-    sendPing();
-  }
-
-  startPeriodicWebSocketSync() {
-    if (this.periodicSyncInterval) clearInterval(this.periodicSyncInterval);
-    this.periodicSyncInterval = setInterval(() => {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        const clientSendTime = performance.now();
-        this.oneOffPing = (rtt, offset) => {
-          this.clockOffset = this.clockOffset * 0.8 + offset * 0.2;
-          this.rtt = Math.round(rtt);
-          if (this.onConnectionChange) {
-            this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt, this.isHost);
-          }
-          this.oneOffPing = null;
-        };
-        this.ws.send(JSON.stringify({
-          type: 'PING',
-          payload: { clientSendTime }
-        }));
-      }
-    }, 6000);
-  }
-
-  // ==========================================
-  // Unified Action Dispatachers
+  // Public Action Broadcasters
   // ==========================================
   sendStart(bpm, beatsPerMeasure) {
     this.audio.init();
@@ -523,29 +296,14 @@ class MetronomeSyncEngine {
     this.bpm = bpm || this.bpm;
     this.beatsPerMeasure = beatsPerMeasure || this.beatsPerMeasure;
 
-    if (this.mode === 'webrtc') {
-      if (this.isHost) {
-        this.startPlayback(startMasterTime, this.bpm, this.beatsPerMeasure);
-        this.broadcastToPeers({
-          type: 'METRONOME_STARTED',
-          payload: {
-            startMasterTime,
-            bpm: this.bpm,
-            beatsPerMeasure: this.beatsPerMeasure
-          }
-        });
-      } else if (this.hostConn && this.hostConn.open) {
-        this.hostConn.send({
-          type: 'FORWARD_ACTION',
-          payload: { actionType: 'START', data: { bpm: this.bpm, beatsPerMeasure: this.beatsPerMeasure } }
-        });
-      } else {
-        this.startPlayback(startMasterTime, this.bpm, this.beatsPerMeasure);
-      }
-    } else if (this.mode === 'websocket' && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        type: 'START_METRONOME',
-        payload: { bpm: this.bpm, beatsPerMeasure: this.beatsPerMeasure, leadTime: 400 }
+    if (this.mqttClient && this.mqttClient.connected) {
+      const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+      this.mqttClient.publish(topicRoom, JSON.stringify({
+        type: 'START',
+        from: this.deviceId,
+        startMasterTime,
+        bpm: this.bpm,
+        beatsPerMeasure: this.beatsPerMeasure
       }));
     } else {
       this.startPlayback(startMasterTime, this.bpm, this.beatsPerMeasure);
@@ -554,20 +312,12 @@ class MetronomeSyncEngine {
   }
 
   sendStop() {
-    if (this.mode === 'webrtc') {
-      if (this.isHost) {
-        this.stopPlayback();
-        this.broadcastToPeers({ type: 'METRONOME_STOPPED', payload: {} });
-      } else if (this.hostConn && this.hostConn.open) {
-        this.hostConn.send({
-          type: 'FORWARD_ACTION',
-          payload: { actionType: 'STOP', data: {} }
-        });
-      } else {
-        this.stopPlayback();
-      }
-    } else if (this.mode === 'websocket' && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: 'STOP_METRONOME', payload: {} }));
+    if (this.mqttClient && this.mqttClient.connected) {
+      const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+      this.mqttClient.publish(topicRoom, JSON.stringify({
+        type: 'STOP',
+        from: this.deviceId
+      }));
     } else {
       this.stopPlayback();
     }
@@ -576,24 +326,15 @@ class MetronomeSyncEngine {
 
   sendTempo(newBpm) {
     this.bpm = newBpm;
-    if (this.mode === 'webrtc') {
-      if (this.isHost) {
-        const startMasterTime = this.isPlaying ? this.getMasterNow() + 300 : null;
-        if (this.isPlaying) {
-          this.startPlayback(startMasterTime, this.bpm, this.beatsPerMeasure);
-        }
-        this.broadcastToPeers({
-          type: 'TEMPO_UPDATED',
-          payload: { bpm: this.bpm, startMasterTime }
-        });
-      } else if (this.hostConn && this.hostConn.open) {
-        this.hostConn.send({
-          type: 'FORWARD_ACTION',
-          payload: { actionType: 'TEMPO', data: { bpm: newBpm } }
-        });
-      }
-    } else if (this.mode === 'websocket' && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: 'SET_TEMPO', payload: { bpm: newBpm } }));
+    if (this.mqttClient && this.mqttClient.connected) {
+      const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+      const startMasterTime = this.isPlaying ? this.getMasterNow() + 300 : null;
+      this.mqttClient.publish(topicRoom, JSON.stringify({
+        type: 'TEMPO',
+        from: this.deviceId,
+        bpm: this.bpm,
+        startMasterTime
+      }));
     } else if (this.isPlaying) {
       this.startPlayback(this.getMasterNow() + 100, this.bpm, this.beatsPerMeasure);
     }
@@ -601,38 +342,30 @@ class MetronomeSyncEngine {
 
   sendBeatsPerMeasure(beats) {
     this.beatsPerMeasure = beats;
-    if (this.mode === 'webrtc') {
-      if (this.isHost) {
-        this.broadcastToPeers({ type: 'BEATS_UPDATED', payload: { beatsPerMeasure: beats } });
-      } else if (this.hostConn && this.hostConn.open) {
-        this.hostConn.send({
-          type: 'FORWARD_ACTION',
-          payload: { actionType: 'BEATS', data: { beatsPerMeasure: beats } }
-        });
-      }
-    } else if (this.mode === 'websocket' && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: 'SET_BEATS', payload: { beatsPerMeasure: beats } }));
+    if (this.mqttClient && this.mqttClient.connected) {
+      const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+      this.mqttClient.publish(topicRoom, JSON.stringify({
+        type: 'BEATS',
+        from: this.deviceId,
+        beatsPerMeasure: beats
+      }));
     }
   }
 
   sendSoundType(soundType) {
     this.audio.setSoundType(soundType);
-    if (this.mode === 'webrtc') {
-      if (this.isHost) {
-        this.broadcastToPeers({ type: 'SOUND_UPDATED', payload: { soundType } });
-      } else if (this.hostConn && this.hostConn.open) {
-        this.hostConn.send({
-          type: 'FORWARD_ACTION',
-          payload: { actionType: 'SOUND', data: { soundType } }
-        });
-      }
-    } else if (this.mode === 'websocket' && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: 'SET_SOUND', payload: { soundType } }));
+    if (this.mqttClient && this.mqttClient.connected) {
+      const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+      this.mqttClient.publish(topicRoom, JSON.stringify({
+        type: 'SOUND',
+        from: this.deviceId,
+        soundType
+      }));
     }
   }
 
   // ==========================================
-  // Core Lookahead Scheduler
+  // Lookahead Web Audio API Scheduler
   // ==========================================
   startPlayback(startMasterTime, bpm, beatsPerMeasure) {
     this.audio.init();

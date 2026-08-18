@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="description" content="Sub-millisecond synchronized metronome for bands & ensembles over local Wi-Fi. Works seamlessly on iOS Safari, Android Chrome, and Desktop.">
+  <meta name="description" content="Sub-millisecond synchronized metronome for bands & ensembles over any Wi-Fi or internet. Works seamlessly on iOS Safari, Android Chrome, and Desktop.">
   <meta name="theme-color" content="#0a0e1a">
 
   <!-- iOS PWA Meta Tags -->
@@ -40,7 +40,7 @@
           <span id="status-text">Connecting...</span>
         </div>
 
-        <button class="btn-icon" id="btn-qr-modal" title="Wi-Fi QR Code / Share" aria-label="Share Wi-Fi QR Code">
+        <button class="btn-icon" id="btn-qr-modal" title="Room QR Code / Share" aria-label="Share Room QR Code">
           <svg viewBox="0 0 24 24">
             <path d="M4 4h6v6H4V4zm2 2v2h2V6H6zm8-2h6v6h-6V4zm2 2v2h2V6h-2zM4 14h6v6H4v-6zm2 2v2h2v-2H6zm10 0h2v2h-2v-2zm2-2h2v2h-2v-2zm-4 4h2v2h-2v-2zm4 0h2v2h-2v-2zm-2-2h2v2h-2v-2zM14 10h2v2h-2v-2zm-4 0h2v2h-2v-2z"/>
           </svg>
@@ -52,7 +52,7 @@
     <section class="card-main">
       <div class="top-meta">
         <span class="tempo-marking" id="tempo-marking">Allegro</span>
-        <span class="room-badge" id="room-badge" title="Click to switch room">Room: MAIN</span>
+        <span class="room-badge" id="room-badge" title="Click to change room code">Room: MAIN ✎</span>
       </div>
 
       <!-- BPM Circular Dial & Display -->
@@ -129,15 +129,6 @@
         </div>
       </div>
 
-      <!-- Sync Mode -->
-      <div class="setting-group">
-        <span class="setting-label">Sync Network</span>
-        <select id="mode-select" style="background: rgba(10,14,26,0.8); color: var(--accent-cyan); border: 1px solid rgba(255,255,255,0.15); padding: 6px 12px; border-radius: var(--radius-sm); font-weight: 600; outline: none; cursor: pointer;">
-          <option value="webrtc">WebRTC P2P (No Server)</option>
-          <option value="websocket">Local Wi-Fi Server</option>
-        </select>
-      </div>
-
       <!-- Sound Style -->
       <div class="setting-group">
         <span class="setting-label">Click Sound</span>
@@ -173,11 +164,6 @@
     <div class="modal-dialog">
       <h2 class="modal-title">📱 Sync with Other Phones</h2>
       <p class="modal-desc">Share this link or scan the QR Code on other phones to beat together in the same room:</p>
-      
-      <div id="adapter-select-container" style="width: 100%; display: none; flex-direction: column; gap: 6px; text-align: left;">
-        <label for="network-select" style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Selected Network Adapter:</label>
-        <select id="network-select" style="width: 100%; background: rgba(10,14,26,0.9); color: var(--accent-cyan); border: 1px solid rgba(0,242,254,0.3); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 0.85rem; font-weight: 600; outline: none; cursor: pointer;"></select>
-      </div>
 
       <div class="qr-frame" id="qr-frame-box">
         <div id="qrcode-canvas-container"></div>
@@ -199,7 +185,7 @@
   </div>
 
   <!-- Scripts -->
-  <script src="./js/peerjs.min.js"></script>
+  <script src="./js/mqtt.min.js"></script>
   <script src="./js/qrcode.min.js"></script>
   <script src="./js/audio.js"></script>
   <script src="./js/sync.js"></script>

@@ -1,9 +1,9 @@
-const CACHE_NAME = 'sync-metronome-v3';
+const CACHE_NAME = 'sync-metronome-v4';
 const ASSETS = [
   './',
   './index.html',
   './css/style.css',
-  './js/peerjs.min.js',
+  './js/mqtt.min.js',
   './js/qrcode.min.js',
   './js/audio.js',
   './js/sync.js',
@@ -31,7 +31,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/ws') || event.request.url.includes('/api/')) {
+  if (event.request.url.includes('/mqtt') || event.request.url.includes('broker.')) {
     return;
   }
 

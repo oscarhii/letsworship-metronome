@@ -1,14 +1,10 @@
+document.addEventListener('DOMContentLoaded', () => {
+  const audio = new MetronomeAudioEngine();
+  const sync = new MetronomeSyncEngine(audio);
+
   // URL parameters helper
   const urlParams = new URLSearchParams(window.location.search);
   const initialRoom = urlParams.get('room') || 'MAIN';
-  
-  // Auto-detect mode: If hosted on GitHub Pages / Vercel / static PWA, default to WebRTC.
-  // If running locally on localhost/IP port 3000, default to local WebSocket.
-  const isLocalServer = window.location.hostname === 'localhost' || 
-                        window.location.hostname === '127.0.0.1' || 
-                        window.location.port === '3000';
-                        
-  const initialMode = urlParams.get('mode') || (isLocalServer ? 'websocket' : 'webrtc');
 
   // DOM Elements
   const bpmDisplay = document.getElementById('bpm-display');
@@ -31,7 +27,6 @@
   const statusText = document.getElementById('status-text');
   const roomBadge = document.getElementById('room-badge');
 
-  const modeSelect = document.getElementById('mode-select');
   const soundSelect = document.getElementById('sound-select');
   const beatsSelectButtons = document.querySelectorAll('.segment-btn');
   const flashToggle = document.getElementById('flash-toggle');
@@ -41,8 +36,6 @@
   const qrModal = document.getElementById('qr-modal');
   const btnCloseQr = document.getElementById('btn-close-qr');
   const qrcodeContainer = document.getElementById('qrcode-canvas-container');
-  const adapterContainer = document.getElementById('adapter-select-container');
-  const networkSelect = document.getElementById('network-select');
   const wifiUrlInput = document.getElementById('wifi-url-input');
   const btnCopyUrl = document.getElementById('btn-copy-url');
 
@@ -50,12 +43,17 @@
 
   let tapTimes = [];
   let wakeLockSentinel = null;
-  let qrCodeInstance = null;
-  let networkIps = [];
 
-  // Setup default mode
-  modeSelect.value = initialMode;
-  roomBadge.textContent = `Room: ${initialRoom}`;
+  roomBadge.textContent = `Room: ${initialRoom} ✎`;
+
+  // Get exact full base URL (handles GitHub Pages repo subpaths)
+  function getAppBaseUrl() {
+    let url = window.location.href.split('?')[0].split('#')[0];
+    if (!url.endsWith('/') && !url.endsWith('.html')) {
+      url += '/';
+    }
+    return url;
+  }
 
   // Tempo markings dictionary
   function getTempoMarking(bpm) {
@@ -142,12 +140,11 @@
   };
 
   // Connection & stats update
-  sync.onConnectionChange = (connected, deviceCount, rtt, isHost) => {
+  sync.onConnectionChange = (connected, deviceCount, rtt) => {
     if (connected) {
       statusPill.classList.add('connected');
-      const roleStr = sync.mode === 'webrtc' ? (isHost ? 'Host' : 'Peer') : 'Wi-Fi';
       const rttStr = rtt > 0 ? ` • ${rtt}ms` : '';
-      statusText.textContent = `Synced (${roleStr} • ${deviceCount} dev)${rttStr}`;
+      statusText.textContent = `Synced (${deviceCount} device${deviceCount > 1 ? 's' : ''})${rttStr}`;
     } else {
       statusPill.classList.remove('connected');
       statusText.textContent = 'Connecting...';
@@ -219,11 +216,6 @@
     sync.sendSoundType(e.target.value);
   });
 
-  // Sync Mode picker
-  modeSelect.addEventListener('change', (e) => {
-    sync.init(sync.roomId, e.target.value);
-  });
-
   // Screen Wake Lock API
   async function requestWakeLock() {
     try {
@@ -279,9 +271,9 @@
     const current = sync.roomId;
     const nextRoom = prompt('Enter Room Code for Band / Group Sync:', current);
     if (nextRoom && nextRoom.trim() !== '') {
-      const roomClean = nextRoom.trim().toUpperCase();
-      roomBadge.textContent = `Room: ${roomClean}`;
-      sync.init(roomClean, sync.mode);
+      const roomClean = nextRoom.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || 'MAIN';
+      roomBadge.textContent = `Room: ${roomClean} ✎`;
+      sync.init(roomClean);
     }
   });
 
@@ -302,52 +294,11 @@
   }
 
   // Wi-Fi / Room QR Code Modal
-  btnQrModal.addEventListener('click', async () => {
+  btnQrModal.addEventListener('click', () => {
     const currentRoom = sync.roomId;
-
-    if (sync.mode === 'websocket') {
-      try {
-        const res = await fetch('/api/info');
-        const data = await res.json();
-        if (data.ips && data.ips.length > 0) {
-          adapterContainer.style.display = 'flex';
-          networkIps = data.ips;
-          networkSelect.innerHTML = '';
-          networkIps.forEach((item, index) => {
-            const opt = document.createElement('option');
-            opt.value = item.ip;
-            const label = item.isWifi ? `📶 ${item.interface} (${item.ip})` : `${item.interface} (${item.ip})`;
-            opt.textContent = label;
-            if (index === 0) opt.selected = true;
-            networkSelect.appendChild(opt);
-          });
-
-          const primaryUrl = `${networkIps[0].url}?room=${currentRoom}&mode=websocket`;
-          renderQrCode(primaryUrl);
-        } else {
-          adapterContainer.style.display = 'none';
-          renderQrCode(`${window.location.origin}/?room=${currentRoom}`);
-        }
-      } catch (e) {
-        adapterContainer.style.display = 'none';
-        renderQrCode(`${window.location.origin}/?room=${currentRoom}`);
-      }
-    } else {
-      // WebRTC Serverless Mode: share direct URL with room parameter
-      adapterContainer.style.display = 'none';
-      const shareUrl = `${window.location.origin}${window.location.pathname}?room=${currentRoom}&mode=webrtc`;
-      renderQrCode(shareUrl);
-    }
-
+    const shareUrl = `${getAppBaseUrl()}?room=${encodeURIComponent(currentRoom)}`;
+    renderQrCode(shareUrl);
     qrModal.classList.add('open');
-  });
-
-  networkSelect.addEventListener('change', (e) => {
-    const selectedIp = e.target.value;
-    const item = networkIps.find((x) => x.ip === selectedIp);
-    if (item) {
-      renderQrCode(`${item.url}?room=${sync.roomId}&mode=websocket`);
-    }
   });
 
   btnCloseQr.addEventListener('click', () => {
@@ -367,12 +318,12 @@
   });
 
   // Start Sync Engine
-  sync.init(initialRoom, initialMode);
+  sync.init(initialRoom);
   updateUI();
 
   // Register PWA Service Worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch((err) => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => {
       console.warn('Service worker registration failed:', err);
     });
   }
