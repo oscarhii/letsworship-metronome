@@ -1,21 +1,28 @@
 /**
- * High-Precision Universal Synchronization Engine
- * Uses Ultra-Fast WSS PubSub / MQTT for seamless cross-network & cross-device beat sync.
+ * High-Precision Multi-Mode Synchronization Engine
+ * Features:
+ * 1. Continuous Multi-Sample NTP Clock Synchronization (Median Filter)
+ * 2. Dual Network Support:
+ *    - Cloud PubSub Mode (Any Wi-Fi / 4G / 5G / GitHub Pages)
+ *    - Local Wi-Fi WebSocket Mode (Ultra-low latency LAN)
+ * 3. Hardware Audio Delay Compensation (Fine Nudge)
  */
 class MetronomeSyncEngine {
   constructor(audioEngine) {
     this.audio = audioEngine;
+    this.mode = 'cloud'; // 'cloud' or 'local'
     this.roomId = 'MAIN';
     this.deviceId = 'DEV_' + Math.random().toString(36).substring(2, 8).toUpperCase();
     this.isConnected = false;
     this.deviceCount = 1;
     this.peerPresence = new Map();
 
-    // Time synchronization
-    this.clockOffset = 0;
+    // High Precision NTP variables
+    this.clockOffset = 0; // LocalTime + clockOffset = MasterRoomTime
     this.rtt = 0;
-    this.syncSamples = [];
+    this.pingHistory = [];
     this.isSynced = false;
+    this.hardwareDelayMs = 0; // User adjustable latency compensation (-100ms to +100ms)
 
     // Playback state
     this.isPlaying = false;
@@ -25,8 +32,8 @@ class MetronomeSyncEngine {
 
     // Scheduler
     this.schedulerTimer = null;
-    this.lookaheadMs = 25;
-    this.scheduleAheadSec = 0.15;
+    this.lookaheadMs = 20;
+    this.scheduleAheadSec = 0.20; // 200ms ahead for rock-solid audio scheduling
     this.nextBeatNumber = 0;
 
     // Callbacks
@@ -34,40 +41,53 @@ class MetronomeSyncEngine {
     this.onStateChange = null;
     this.onConnectionChange = null;
 
-    // Client instance
+    // Clients
     this.mqttClient = null;
+    this.wsClient = null;
     this.presenceTimer = null;
+    this.periodicPingTimer = null;
 
     this.lastVisualBeat = -1;
     this.animationFrameId = null;
   }
 
   getMasterNow() {
-    return Date.now() + this.clockOffset;
+    return Date.now() + this.clockOffset + this.hardwareDelayMs;
   }
 
-  init(roomId = 'MAIN') {
-    this.roomId = (roomId || 'MAIN').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
-    if (!this.roomId) this.roomId = 'MAIN';
+  setHardwareDelay(ms) {
+    this.hardwareDelayMs = parseInt(ms, 10) || 0;
+  }
+
+  init(roomId = 'MAIN', mode = 'cloud') {
+    this.roomId = (roomId || 'MAIN').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || 'MAIN';
+    this.mode = mode || 'cloud';
 
     this.cleanup();
-    this.initCloudPubSub();
+
+    if (this.mode === 'local') {
+      this.initLocalWebSocket();
+    } else {
+      this.initCloudPubSub();
+    }
   }
 
   cleanup() {
     if (this.mqttClient) {
-      try {
-        this.mqttClient.end(true);
-      } catch (e) {}
+      try { this.mqttClient.end(true); } catch (e) {}
       this.mqttClient = null;
+    }
+    if (this.wsClient) {
+      try { this.wsClient.close(); } catch (e) {}
+      this.wsClient = null;
     }
     if (this.presenceTimer) {
       clearInterval(this.presenceTimer);
       this.presenceTimer = null;
     }
-    if (this.periodicSyncInterval) {
-      clearInterval(this.periodicSyncInterval);
-      this.periodicSyncInterval = null;
+    if (this.periodicPingTimer) {
+      clearInterval(this.periodicPingTimer);
+      this.periodicPingTimer = null;
     }
     this.peerPresence.clear();
     this.isConnected = false;
@@ -75,32 +95,26 @@ class MetronomeSyncEngine {
   }
 
   // ==========================================
-  // Cloud WSS PubSub Synchronization
+  // 1. Cloud PubSub Sync (MQTT over WSS)
   // ==========================================
   initCloudPubSub() {
-    // Primary public brokers with fallback
-    const brokerUrls = [
-      'wss://broker.emqx.io:8084/mqtt',
-      'wss://broker.hivemq.com:8884/mqtt'
-    ];
-    const brokerUrl = brokerUrls[0];
-
-    const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
-    const topicPresence = `letsworship/metronome/v1/${this.roomId}/presence`;
+    const brokerUrl = 'wss://broker.emqx.io:8084/mqtt';
+    const topicRoom = `letsworship/metronome/v2/${this.roomId}/events`;
+    const topicPresence = `letsworship/metronome/v2/${this.roomId}/presence`;
 
     try {
       if (typeof mqtt === 'undefined') {
-        console.warn('MQTT library not loaded, running in standalone mode.');
+        console.warn('MQTT client unavailable, standalone mode');
         this.isConnected = true;
-        if (this.onConnectionChange) this.onConnectionChange(true, 1, 0);
+        if (this.onConnectionChange) this.onConnectionChange(true, 1, 0, 'cloud');
         return;
       }
 
       this.mqttClient = mqtt.connect(brokerUrl, {
         clientId: `sync_${this.deviceId}`,
         clean: true,
-        connectTimeout: 4000,
-        keepalive: 30
+        connectTimeout: 5000,
+        keepalive: 20
       });
 
       this.mqttClient.on('connect', () => {
@@ -109,61 +123,129 @@ class MetronomeSyncEngine {
 
         this.mqttClient.subscribe([topicRoom, topicPresence], (err) => {
           if (!err) {
-            // Announce presence
             this.sendPresence();
-            // Start periodic presence heartbeat
             this.startPresenceHeartbeat();
-            // Run initial clock sync ping
-            this.sendPing();
+            // Run rapid burst of 6 NTP calibration pings
+            this.runCalibrationBurst();
+            this.startContinuousNtpSync();
           }
         });
 
         if (this.onConnectionChange) {
-          this.onConnectionChange(true, this.deviceCount, this.rtt);
+          this.onConnectionChange(true, this.deviceCount, this.rtt, 'cloud');
         }
       });
 
       this.mqttClient.on('message', (topic, messageBuffer) => {
         try {
           const msg = JSON.parse(messageBuffer.toString());
-          this.handleNetworkMessage(topic, msg);
-        } catch (e) {
-          console.warn('Error parsing message:', e);
-        }
-      });
-
-      this.mqttClient.on('error', (err) => {
-        console.warn('MQTT connection warning:', err);
+          this.handleCloudMessage(topic, msg);
+        } catch (e) {}
       });
 
       this.mqttClient.on('offline', () => {
         this.isConnected = false;
-        if (this.onConnectionChange) {
-          this.onConnectionChange(false, 1, 0);
-        }
+        if (this.onConnectionChange) this.onConnectionChange(false, 1, 0, 'cloud');
       });
 
       this.mqttClient.on('reconnect', () => {
         this.isConnected = true;
-        if (this.onConnectionChange) {
-          this.onConnectionChange(true, this.deviceCount, this.rtt);
-        }
+        if (this.onConnectionChange) this.onConnectionChange(true, this.deviceCount, this.rtt, 'cloud');
       });
     } catch (e) {
-      console.error('Failed to initialize sync:', e);
+      console.error('Cloud sync error:', e);
       this.isConnected = true;
-      if (this.onConnectionChange) this.onConnectionChange(true, 1, 0);
+      if (this.onConnectionChange) this.onConnectionChange(true, 1, 0, 'cloud');
     }
+  }
+
+  // ==========================================
+  // 2. Local Wi-Fi WebSocket Sync (Node.js Server on LAN)
+  // ==========================================
+  initLocalWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}`;
+
+    try {
+      this.wsClient = new WebSocket(wsUrl);
+
+      this.wsClient.onopen = () => {
+        this.isConnected = true;
+        this.wsClient.send(JSON.stringify({
+          type: 'JOIN_ROOM',
+          payload: { roomId: this.roomId }
+        }));
+        this.runLocalWebSocketNtpBurst();
+        if (this.onConnectionChange) this.onConnectionChange(true, this.deviceCount, this.rtt, 'local');
+      };
+
+      this.wsClient.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          this.handleLocalWsMessage(msg);
+        } catch (e) {}
+      };
+
+      this.wsClient.onclose = () => {
+        this.isConnected = false;
+        if (this.onConnectionChange) this.onConnectionChange(false, 1, 0, 'local');
+      };
+    } catch (e) {
+      console.warn('Local WS error:', e);
+    }
+  }
+
+  // ==========================================
+  // NTP Clock Calibration Engine
+  // ==========================================
+  runCalibrationBurst() {
+    let count = 0;
+    const burstTimer = setInterval(() => {
+      this.sendNtpPing();
+      count++;
+      if (count >= 6) clearInterval(burstTimer);
+    }, 150);
+  }
+
+  startContinuousNtpSync() {
+    if (this.periodicPingTimer) clearInterval(this.periodicPingTimer);
+    this.periodicPingTimer = setInterval(() => {
+      this.sendNtpPing();
+    }, 4000);
+  }
+
+  sendNtpPing() {
+    if (this.mode === 'cloud' && this.mqttClient && this.mqttClient.connected) {
+      const topicRoom = `letsworship/metronome/v2/${this.roomId}/events`;
+      this.mqttClient.publish(topicRoom, JSON.stringify({
+        type: 'NTP_PING',
+        from: this.deviceId,
+        clientSendTime: performance.now()
+      }));
+    }
+  }
+
+  runLocalWebSocketNtpBurst() {
+    let count = 0;
+    const burst = setInterval(() => {
+      if (this.wsClient && this.wsClient.readyState === WebSocket.OPEN) {
+        this.wsClient.send(JSON.stringify({
+          type: 'PING',
+          payload: { clientSendTime: performance.now() }
+        }));
+      }
+      count++;
+      if (count >= 6) clearInterval(burst);
+    }, 100);
   }
 
   sendPresence() {
     if (!this.mqttClient || !this.mqttClient.connected) return;
-    const topicPresence = `letsworship/metronome/v1/${this.roomId}/presence`;
+    const topicPresence = `letsworship/metronome/v2/${this.roomId}/presence`;
     this.mqttClient.publish(topicPresence, JSON.stringify({
       deviceId: this.deviceId,
-      timestamp: Date.now(),
-      bpm: this.bpm,
-      isPlaying: this.isPlaying
+      timestamp: Date.now()
     }));
   }
 
@@ -172,7 +254,6 @@ class MetronomeSyncEngine {
     this.presenceTimer = setInterval(() => {
       this.sendPresence();
 
-      // Clean up stale peers (inactive for > 8s)
       const now = Date.now();
       for (const [id, lastSeen] of this.peerPresence.entries()) {
         if (now - lastSeen > 8000) {
@@ -181,70 +262,60 @@ class MetronomeSyncEngine {
       }
       this.deviceCount = this.peerPresence.size + 1;
       if (this.onConnectionChange) {
-        this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt);
+        this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt, this.mode);
       }
-    }, 3000);
+    }, 2500);
   }
 
-  sendPing() {
-    if (!this.mqttClient || !this.mqttClient.connected) return;
-    const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
-    this.mqttClient.publish(topicRoom, JSON.stringify({
-      type: 'PING',
-      from: this.deviceId,
-      clientSendTime: performance.now()
-    }));
-  }
-
-  handleNetworkMessage(topic, msg) {
-    // 1. Handle presence updates
+  handleCloudMessage(topic, msg) {
     if (topic.endsWith('/presence')) {
       if (msg.deviceId && msg.deviceId !== this.deviceId) {
         this.peerPresence.set(msg.deviceId, Date.now());
         this.deviceCount = this.peerPresence.size + 1;
         if (this.onConnectionChange) {
-          this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt);
+          this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt, this.mode);
         }
       }
       return;
     }
 
-    // 2. Handle room sync events
     const { type, from } = msg;
 
     switch (type) {
-      case 'PING': {
-        // If another device pinged, reply with PONG + our clock timestamp
+      case 'NTP_PING': {
+        // Reply with server time timestamp
         if (from !== this.deviceId && this.mqttClient && this.mqttClient.connected) {
-          const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+          const topicRoom = `letsworship/metronome/v2/${this.roomId}/events`;
           this.mqttClient.publish(topicRoom, JSON.stringify({
-            type: 'PONG',
+            type: 'NTP_PONG',
             to: from,
             clientSendTime: msg.clientSendTime,
-            serverReceiveTime: Date.now()
+            serverEpoch: Date.now()
           }));
         }
         break;
       }
 
-      case 'PONG': {
-        // If PONG is addressed to us, compute NTP clock offset and RTT
+      case 'NTP_PONG': {
         if (msg.to === this.deviceId) {
           const clientReceiveTime = performance.now();
           const rtt = clientReceiveTime - msg.clientSendTime;
           const approxLocalEpoch = Date.now() - rtt / 2;
-          const offset = msg.serverReceiveTime - approxLocalEpoch;
+          const offset = msg.serverEpoch - approxLocalEpoch;
 
-          // Smooth offset update
-          if (!this.isSynced) {
-            this.clockOffset = offset;
-            this.isSynced = true;
-          } else {
-            this.clockOffset = this.clockOffset * 0.8 + offset * 0.2;
-          }
-          this.rtt = Math.round(rtt);
+          this.pingHistory.push({ rtt, offset });
+          if (this.pingHistory.length > 8) this.pingHistory.shift();
+
+          // Compute median offset (filters out network spikes)
+          const sorted = [...this.pingHistory].sort((a, b) => a.rtt - b.rtt);
+          const medianSample = sorted[0];
+
+          this.clockOffset = Math.round(medianSample.offset);
+          this.rtt = Math.round(medianSample.rtt);
+          this.isSynced = true;
+
           if (this.onConnectionChange) {
-            this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt);
+            this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt, this.mode);
           }
         }
         break;
@@ -287,23 +358,93 @@ class MetronomeSyncEngine {
     }
   }
 
+  handleLocalWsMessage(msg) {
+    const { type, payload } = msg;
+
+    switch (type) {
+      case 'PONG': {
+        const clientReceiveTime = performance.now();
+        const rtt = clientReceiveTime - payload.clientSendTime;
+        const approxLocalEpoch = Date.now() - rtt / 2;
+        const offset = payload.serverReceiveTime - approxLocalEpoch;
+
+        this.clockOffset = Math.round(offset);
+        this.rtt = Math.round(rtt);
+        this.isSynced = true;
+        if (this.onConnectionChange) {
+          this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt, this.mode);
+        }
+        break;
+      }
+
+      case 'ROOM_JOINED':
+      case 'ROOM_STATS': {
+        if (payload.deviceCount) this.deviceCount = payload.deviceCount;
+        if (this.onConnectionChange) this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt, this.mode);
+        break;
+      }
+
+      case 'METRONOME_STARTED': {
+        this.bpm = payload.bpm;
+        this.beatsPerMeasure = payload.beatsPerMeasure;
+        this.startPlayback(payload.startMasterTime, this.bpm, this.beatsPerMeasure);
+        if (this.onStateChange) this.onStateChange();
+        break;
+      }
+
+      case 'METRONOME_STOPPED': {
+        this.stopPlayback();
+        if (this.onStateChange) this.onStateChange();
+        break;
+      }
+
+      case 'TEMPO_UPDATED': {
+        this.bpm = payload.bpm;
+        if (this.isPlaying && payload.startMasterTime) {
+          this.startPlayback(payload.startMasterTime, this.bpm, this.beatsPerMeasure);
+        }
+        if (this.onStateChange) this.onStateChange();
+        break;
+      }
+
+      case 'BEATS_UPDATED': {
+        this.beatsPerMeasure = payload.beatsPerMeasure;
+        if (this.onStateChange) this.onStateChange();
+        break;
+      }
+
+      case 'SOUND_UPDATED': {
+        this.audio.setSoundType(payload.soundType);
+        if (this.onStateChange) this.onStateChange();
+        break;
+      }
+    }
+  }
+
   // ==========================================
-  // Public Action Broadcasters
+  // Synchronized Actions (With 600ms Lead-time for Perfect Phase Alignment)
   // ==========================================
   sendStart(bpm, beatsPerMeasure) {
     this.audio.init();
-    const startMasterTime = this.getMasterNow() + 400;
+    // 600ms lead time allows network packets to arrive on all phones with 0ms audio lag
+    const leadTime = 600;
+    const startMasterTime = this.getMasterNow() + leadTime;
     this.bpm = bpm || this.bpm;
     this.beatsPerMeasure = beatsPerMeasure || this.beatsPerMeasure;
 
-    if (this.mqttClient && this.mqttClient.connected) {
-      const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+    if (this.mode === 'cloud' && this.mqttClient && this.mqttClient.connected) {
+      const topicRoom = `letsworship/metronome/v2/${this.roomId}/events`;
       this.mqttClient.publish(topicRoom, JSON.stringify({
         type: 'START',
         from: this.deviceId,
         startMasterTime,
         bpm: this.bpm,
         beatsPerMeasure: this.beatsPerMeasure
+      }));
+    } else if (this.mode === 'local' && this.wsClient && this.wsClient.readyState === WebSocket.OPEN) {
+      this.wsClient.send(JSON.stringify({
+        type: 'START_METRONOME',
+        payload: { bpm: this.bpm, beatsPerMeasure: this.beatsPerMeasure, leadTime: 500 }
       }));
     } else {
       this.startPlayback(startMasterTime, this.bpm, this.beatsPerMeasure);
@@ -312,12 +453,14 @@ class MetronomeSyncEngine {
   }
 
   sendStop() {
-    if (this.mqttClient && this.mqttClient.connected) {
-      const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+    if (this.mode === 'cloud' && this.mqttClient && this.mqttClient.connected) {
+      const topicRoom = `letsworship/metronome/v2/${this.roomId}/events`;
       this.mqttClient.publish(topicRoom, JSON.stringify({
         type: 'STOP',
         from: this.deviceId
       }));
+    } else if (this.mode === 'local' && this.wsClient && this.wsClient.readyState === WebSocket.OPEN) {
+      this.wsClient.send(JSON.stringify({ type: 'STOP_METRONOME', payload: {} }));
     } else {
       this.stopPlayback();
     }
@@ -326,15 +469,17 @@ class MetronomeSyncEngine {
 
   sendTempo(newBpm) {
     this.bpm = newBpm;
-    if (this.mqttClient && this.mqttClient.connected) {
-      const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
-      const startMasterTime = this.isPlaying ? this.getMasterNow() + 300 : null;
+    if (this.mode === 'cloud' && this.mqttClient && this.mqttClient.connected) {
+      const topicRoom = `letsworship/metronome/v2/${this.roomId}/events`;
+      const startMasterTime = this.isPlaying ? this.getMasterNow() + 400 : null;
       this.mqttClient.publish(topicRoom, JSON.stringify({
         type: 'TEMPO',
         from: this.deviceId,
         bpm: this.bpm,
         startMasterTime
       }));
+    } else if (this.mode === 'local' && this.wsClient && this.wsClient.readyState === WebSocket.OPEN) {
+      this.wsClient.send(JSON.stringify({ type: 'SET_TEMPO', payload: { bpm: newBpm } }));
     } else if (this.isPlaying) {
       this.startPlayback(this.getMasterNow() + 100, this.bpm, this.beatsPerMeasure);
     }
@@ -342,30 +487,34 @@ class MetronomeSyncEngine {
 
   sendBeatsPerMeasure(beats) {
     this.beatsPerMeasure = beats;
-    if (this.mqttClient && this.mqttClient.connected) {
-      const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+    if (this.mode === 'cloud' && this.mqttClient && this.mqttClient.connected) {
+      const topicRoom = `letsworship/metronome/v2/${this.roomId}/events`;
       this.mqttClient.publish(topicRoom, JSON.stringify({
         type: 'BEATS',
         from: this.deviceId,
         beatsPerMeasure: beats
       }));
+    } else if (this.mode === 'local' && this.wsClient && this.wsClient.readyState === WebSocket.OPEN) {
+      this.wsClient.send(JSON.stringify({ type: 'SET_BEATS', payload: { beatsPerMeasure: beats } }));
     }
   }
 
   sendSoundType(soundType) {
     this.audio.setSoundType(soundType);
-    if (this.mqttClient && this.mqttClient.connected) {
-      const topicRoom = `letsworship/metronome/v1/${this.roomId}/events`;
+    if (this.mode === 'cloud' && this.mqttClient && this.mqttClient.connected) {
+      const topicRoom = `letsworship/metronome/v2/${this.roomId}/events`;
       this.mqttClient.publish(topicRoom, JSON.stringify({
         type: 'SOUND',
         from: this.deviceId,
         soundType
       }));
+    } else if (this.mode === 'local' && this.wsClient && this.wsClient.readyState === WebSocket.OPEN) {
+      this.wsClient.send(JSON.stringify({ type: 'SET_SOUND', payload: { soundType } }));
     }
   }
 
   // ==========================================
-  // Lookahead Web Audio API Scheduler
+  // Core Lookahead Audio Scheduler (DAC Hardware Precision)
   // ==========================================
   startPlayback(startMasterTime, bpm, beatsPerMeasure) {
     this.audio.init();

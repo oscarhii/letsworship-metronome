@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // URL parameters helper
   const urlParams = new URLSearchParams(window.location.search);
   const initialRoom = urlParams.get('room') || 'MAIN';
+  const initialMode = urlParams.get('mode') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'local' : 'cloud');
 
   // DOM Elements
   const bpmDisplay = document.getElementById('bpm-display');
@@ -27,7 +28,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusText = document.getElementById('status-text');
   const roomBadge = document.getElementById('room-badge');
 
+  const networkModeSelect = document.getElementById('network-mode-select');
   const soundSelect = document.getElementById('sound-select');
+  const delaySlider = document.getElementById('delay-slider');
+  const delayValLabel = document.getElementById('delay-val-label');
   const beatsSelectButtons = document.querySelectorAll('.segment-btn');
   const flashToggle = document.getElementById('flash-toggle');
   const wakeLockToggle = document.getElementById('wakelock-toggle');
@@ -45,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let wakeLockSentinel = null;
 
   roomBadge.textContent = `Room: ${initialRoom} ✎`;
+  networkModeSelect.value = initialMode;
 
   // Get exact full base URL (handles GitHub Pages repo subpaths)
   function getAppBaseUrl() {
@@ -80,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const minBpm = 30;
     const maxBpm = 280;
     const percent = (bpm - minBpm) / (maxBpm - minBpm);
-    const circumference = 2 * Math.PI * 90; // r=90
+    const circumference = 2 * Math.PI * 90;
     dialProgress.style.strokeDashoffset = circumference * (1 - percent);
 
     // Update play button
@@ -134,17 +139,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // State change from remote peer / websocket
   sync.onStateChange = () => {
     updateUI();
   };
 
-  // Connection & stats update
-  sync.onConnectionChange = (connected, deviceCount, rtt) => {
+  sync.onConnectionChange = (connected, deviceCount, rtt, mode) => {
     if (connected) {
       statusPill.classList.add('connected');
       const rttStr = rtt > 0 ? ` • ${rtt}ms` : '';
-      statusText.textContent = `Synced (${deviceCount} device${deviceCount > 1 ? 's' : ''})${rttStr}`;
+      const modeLabel = mode === 'local' ? 'LAN' : 'Cloud';
+      statusText.textContent = `Synced (${modeLabel} • ${deviceCount} dev)${rttStr}`;
     } else {
       statusPill.classList.remove('connected');
       statusText.textContent = 'Connecting...';
@@ -216,6 +220,18 @@ document.addEventListener('DOMContentLoaded', () => {
     sync.sendSoundType(e.target.value);
   });
 
+  // Dual Network Mode Switcher
+  networkModeSelect.addEventListener('change', (e) => {
+    sync.init(sync.roomId, e.target.value);
+  });
+
+  // Hardware Delay Calibration Slider
+  delaySlider.addEventListener('input', (e) => {
+    const val = parseInt(e.target.value, 10);
+    delayValLabel.textContent = `${val > 0 ? '+' : ''}${val} ms`;
+    sync.setHardwareDelay(val);
+  });
+
   // Screen Wake Lock API
   async function requestWakeLock() {
     try {
@@ -273,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (nextRoom && nextRoom.trim() !== '') {
       const roomClean = nextRoom.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || 'MAIN';
       roomBadge.textContent = `Room: ${roomClean} ✎`;
-      sync.init(roomClean);
+      sync.init(roomClean, sync.mode);
     }
   });
 
@@ -296,7 +312,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Wi-Fi / Room QR Code Modal
   btnQrModal.addEventListener('click', () => {
     const currentRoom = sync.roomId;
-    const shareUrl = `${getAppBaseUrl()}?room=${encodeURIComponent(currentRoom)}`;
+    const mode = sync.mode;
+    const shareUrl = `${getAppBaseUrl()}?room=${encodeURIComponent(currentRoom)}&mode=${mode}`;
     renderQrCode(shareUrl);
     qrModal.classList.add('open');
   });
@@ -318,7 +335,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Start Sync Engine
-  sync.init(initialRoom);
+  sync.init(initialRoom, initialMode);
   updateUI();
 
   // Register PWA Service Worker
