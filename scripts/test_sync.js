@@ -1,93 +1,31 @@
-const http = require('http');
-const WebSocket = require('ws');
+const fs = require('fs');
+const path = require('path');
 
-async function testEndpoint(path) {
-  return new Promise((resolve, reject) => {
-    http.get(`http://localhost:3000${path}`, (res) => {
-      let data = '';
-      res.on('data', (chunk) => data += chunk);
-      res.on('end', () => {
-        resolve({ status: res.statusCode, length: data.length, data });
-      });
-    }).on('error', reject);
-  });
+const root = path.resolve(__dirname, '..');
+const required = [
+  'public/index.html',
+  'public/js/audio.js',
+  'public/js/sync.js',
+  'public/js/app.js',
+  'public/js/qrcode.min.js',
+  'public/js/jsQR.js',
+  'public/sw.js',
+  'public/manifest.json'
+];
+
+for (const relative of required) {
+  if (!fs.existsSync(path.join(root, relative))) throw new Error('Missing asset: ' + relative);
 }
 
-async function runTests() {
-  console.log('Testing HTTP Endpoints:');
-  const paths = [
-    '/',
-    '/css/style.css',
-    '/js/audio.js',
-    '/js/sync.js',
-    '/js/app.js',
-    '/manifest.json',
-    '/icons/icon.svg',
-    '/api/info'
-  ];
+const syncSource = fs.readFileSync(path.join(root, 'public/js/sync.js'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
+const sw = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 
-  for (const p of paths) {
-    const res = await testEndpoint(p);
-    console.log(`  ✅ ${p} -> Status ${res.status}, Size: ${res.length} bytes`);
-  }
-
-  console.log('\nTesting WebSocket Sync & NTP:');
-  const ws1 = new WebSocket('ws://localhost:3000');
-  const ws2 = new WebSocket('ws://localhost:3000');
-
-  let ws1Joined = false;
-  let ws2Joined = false;
-
-  await new Promise((resolve) => {
-    let openCount = 0;
-    const checkOpen = () => {
-      openCount++;
-      if (openCount === 2) resolve();
-    };
-    ws1.on('open', checkOpen);
-    ws2.on('open', checkOpen);
-  });
-
-  console.log('  ✅ 2 WebSocket clients connected.');
-
-  // Test NTP Ping Pong
-  const pingPromise = new Promise((resolve) => {
-    ws1.on('message', (data) => {
-      const msg = JSON.parse(data);
-      if (msg.type === 'PONG') {
-        console.log('  ✅ Received NTP PONG from server:', msg.payload);
-        resolve();
-      }
-    });
-    ws1.send(JSON.stringify({ type: 'PING', payload: { clientSendTime: Date.now() } }));
-  });
-  await pingPromise;
-
-  // Test Join Room & Broadcast Start
-  const syncPromise = new Promise((resolve) => {
-    ws2.on('message', (data) => {
-      const msg = JSON.parse(data);
-      if (msg.type === 'METRONOME_STARTED') {
-        console.log('  ✅ WS2 received synced START from WS1:', msg.payload);
-        resolve();
-      }
-    });
-
-    ws1.send(JSON.stringify({ type: 'JOIN_ROOM', payload: { roomId: 'TEST_ROOM' } }));
-    ws2.send(JSON.stringify({ type: 'JOIN_ROOM', payload: { roomId: 'TEST_ROOM' } }));
-
-    setTimeout(() => {
-      ws1.send(JSON.stringify({
-        type: 'START_METRONOME',
-        payload: { bpm: 140, beatsPerMeasure: 4, leadTime: 300 }
-      }));
-    }, 200);
-  });
-  await syncPromise;
-
-  ws1.close();
-  ws2.close();
-  console.log('\n🎉 ALL SYNCHRONIZATION AND HTTP TESTS PASSED SUCCESSFULLY!');
+if (/mqtt|broker\.emqx|WebSocket\(/i.test(syncSource + html + sw)) {
+  throw new Error('Cloud/WebSocket transport is still referenced by the PWA.');
 }
+if (!syncSource.includes('iceServers: []')) throw new Error('WebRTC is not restricted to LAN ICE candidates.');
+if (!html.includes('./js/jsQR.js')) throw new Error('Offline QR scanner is not loaded.');
+if (!sw.includes('./js/jsQR.js')) throw new Error('Offline QR scanner is not cached.');
 
-runTests().catch(console.error);
+console.log('Offline WebRTC PWA checks passed.');

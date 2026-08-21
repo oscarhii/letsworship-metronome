@@ -1,10 +1,10 @@
-const CACHE_NAME = 'sync-metronome-v4';
+const CACHE_NAME = 'sync-metronome-v5-offline-webrtc';
 const ASSETS = [
   './',
   './index.html',
   './css/style.css',
-  './js/mqtt.min.js',
   './js/qrcode.min.js',
+  './js/jsQR.js',
   './js/audio.js',
   './js/sync.js',
   './js/app.js',
@@ -31,10 +31,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.url.includes('/mqtt') || event.request.url.includes('broker.')) {
-    return;
-  }
-
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       return (

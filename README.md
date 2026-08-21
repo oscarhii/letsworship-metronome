@@ -1,88 +1,55 @@
-# 🎵 Sync Metronome PWA (iOS & Android Wi-Fi Beat Sync)
+# SyncBeat Offline PWA
 
-A high-precision, sub-millisecond synchronized metronome Progressive Web App (PWA) designed for musicians, bands, orchestras, and drumlines rehearsing over the same Wi-Fi network.
+SyncBeat is an installable metronome for iOS and Android. Devices synchronize
+directly over the same Wi-Fi network or phone hotspot using WebRTC data
+channels. Beat events do not use MQTT, a cloud sync service, a LAN computer, or
+a Node.js WebSocket server.
 
-When any device starts, stops, or changes tempo, **all connected devices beat together in perfect synchrony**.
+## Install once, use offline
 
----
+1. While internet access is available, open the GitHub Pages deployment.
+2. Android: choose **Install app** in Chrome.
+3. iOS: open in Safari, choose **Share > Add to Home Screen**.
+4. Launch the installed app once so its offline files are cached.
+5. At rehearsal, connect every device to the same Wi-Fi/hotspot. Internet
+   access is not required.
 
-## ✨ Key Features
+The public website is used only to install and update the static PWA. During a
+session, pairing and metronome data remain between the devices.
 
-- 📶 **Sub-Millisecond Wi-Fi Synchronization**:
-  - Continuous NTP-style clock offset calculation (Cristian's algorithm) compensating for network round-trip time (RTT).
-  - Quantized epoch scheduling ensures all devices trigger clicks simultaneously at the exact physical millisecond.
-- 🔊 **Precision Web Audio Engine**:
-  - Lookahead audio buffer scheduling (`AudioContext.currentTime`) avoiding JavaScript event loop timer jitter.
-  - Three distinct sound presets: **Electronic Beep**, **Crisp Woodblock**, and **Snappy Rimshot**.
-  - Beat 1 accentuation with higher pitch and volume.
-- 📱 **Cross-Platform PWA (iOS & Android)**:
-  - **iOS Safari Support**: Automatic AudioContext unlocking and "Add to Home Screen" standalone app mode.
-  - **Android Chrome Support**: Instant PWA install banner.
-  - **Screen Wake Lock**: Automatically prevents device screens from turning off during practice.
-- 🎯 **Visual Metronome & Flash**:
-  - High-contrast visual screen flash on beats (great for noisy stages or across the room).
-  - Beat ring and live beat counter dots (e.g. 2/4, 3/4, 4/4, 6/8).
-  - Tap Tempo with automatic BPM averaging.
-  - Fine-tuning steppers (±1, ±5 BPM) and slider (30 – 280 BPM).
-- 📲 **1-Click QR Code Sharing**:
-  - Built-in Wi-Fi IP detection with a large QR Code for iPhone & Android camera scanning.
+## Pair devices without a server
 
----
+1. On one device, open the QR panel and choose **Create room**.
+2. On a second device, choose **Join**, then scan the host's invitation QR.
+3. The joining device displays a response QR. Let the host scan that response.
+4. Repeat **Add another device** on the host for each additional phone/tablet.
 
-## 🚀 Getting Started
+Copy/paste pairing codes are available when camera permission is unavailable.
+The two-way exchange replaces the signalling server normally used by WebRTC.
 
-### 1. Start the Local Sync Hub
+## Important limitations
 
-Run on your laptop / computer connected to the Wi-Fi:
+- All participants must be on the same LAN; guest/client isolation must be off.
+- Pairing must be repeated after closing the peer connection or restarting the
+  PWA. Browsers do not allow a PWA to host a discoverable LAN server.
+- Camera access, PWA installation, and service workers require HTTPS. GitHub
+  Pages provides HTTPS; the local preview server is intended only for desktop
+  development on localhost.
+- A hotspot may prevent attached clients from communicating with one another.
+  The host-and-spoke layout only requires each guest to reach the host device,
+  but hotspot behavior still varies by OS and vendor.
 
-```bash
-# Install dependencies
-npm install
+## Development
 
-# Start server
-npm start
-```
+Run npm install, then npm start, and open http://localhost:3000.
 
-The terminal will display your local network Wi-Fi address (e.g., `http://192.168.0.149:3000`).
+The Node process serves static files for local preview only and does not
+participate in synchronization.
 
-### 2. Connect Your Phones & Tablets
+## Structure
 
-1. Make sure all devices are connected to the **same Wi-Fi network**.
-2. Open the URL in your browser or **scan the QR Code** shown on the host device by tapping the **QR button** at the top right.
-3. Open the app on each phone, tap the screen to activate audio, and press **START SYNC**!
-
----
-
-## 📱 Installing to Home Screen (PWA)
-
-- **iOS (iPhone/iPad)**:
-  1. Open Safari and navigate to your server's Wi-Fi address.
-  2. Tap the **Share button** (square with an arrow pointing up).
-  3. Scroll down and tap **"Add to Home Screen"**.
-- **Android (Chrome)**:
-  1. Open Chrome and navigate to the Wi-Fi address.
-  2. Tap the **three dots menu (⋮)** or the prompt **"Install app"**.
-
----
-
-## 🛠️ Project Structure
-
-```text
-sync-metronome - PWA/
-├── server.js              # Node.js WebSocket hub & NTP sync server
-├── package.json           # Dependencies (Express, ws, qrcode)
-├── public/
-│   ├── index.html         # Responsive metronome UI & PWA layout
-│   ├── manifest.json      # Web App Manifest
-│   ├── sw.js              # Service Worker for offline caching
-│   ├── css/
-│   │   └── style.css      # Dark glassmorphism styling & animations
-│   ├── js/
-│   │   ├── audio.js       # Web Audio API synthesizer & scheduler
-│   │   ├── sync.js        # NTP clock synchronization engine
-│   │   └── app.js         # UI controller, Tap Tempo, Wake Lock
-│   └── icons/
-│       └── icon.svg       # App icon
-└── scripts/
-    └── test_sync.js       # Automated test suite
-```
+- public/js/sync.js — WebRTC star topology, clock calibration, beat events
+- public/js/app.js — UI, QR pairing, camera scanning
+- public/js/audio.js — Web Audio lookahead scheduler
+- public/sw.js — offline application cache
+- docs/ — GitHub Pages deployment copy

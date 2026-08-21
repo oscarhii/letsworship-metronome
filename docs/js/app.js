@@ -1,67 +1,50 @@
 document.addEventListener('DOMContentLoaded', () => {
   const audio = new MetronomeAudioEngine();
   const sync = new MetronomeSyncEngine(audio);
+  const el = (id) => document.getElementById(id);
 
-  // URL parameters helper
-  const urlParams = new URLSearchParams(window.location.search);
-  const initialRoom = urlParams.get('room') || 'MAIN';
-  const initialMode = urlParams.get('mode') || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? 'local' : 'cloud');
+  const bpmDisplay = el('bpm-display');
+  const tempoMarking = el('tempo-marking');
+  const tempoSlider = el('tempo-slider');
+  const btnPlay = el('btn-play-sync');
+  const playIcon = el('play-icon');
+  const playText = el('play-text');
+  const dialProgress = el('dial-progress');
+  const beatDots = el('beat-dots');
+  const flashOverlay = el('flash-overlay');
+  const statusPill = el('status-pill');
+  const statusText = el('status-text');
+  const roomBadge = el('room-badge');
+  const soundSelect = el('sound-select');
+  const delaySlider = el('delay-slider');
+  const delayLabel = el('delay-val-label');
+  const flashToggle = el('flash-toggle');
+  const wakeToggle = el('wakelock-toggle');
+  const audioBanner = el('audio-unlock-banner');
 
-  // DOM Elements
-  const bpmDisplay = document.getElementById('bpm-display');
-  const tempoMarking = document.getElementById('tempo-marking');
-  const tempoSlider = document.getElementById('tempo-slider');
-  const btnPlay = document.getElementById('btn-play-sync');
-  const playIcon = document.getElementById('play-icon');
-  const playText = document.getElementById('play-text');
-  const dialProgress = document.getElementById('dial-progress');
-  const beatDotsContainer = document.getElementById('beat-dots');
-  const flashOverlay = document.getElementById('flash-overlay');
-
-  const btnMinus1 = document.getElementById('btn-minus-1');
-  const btnPlus1 = document.getElementById('btn-plus-1');
-  const btnMinus5 = document.getElementById('btn-minus-5');
-  const btnPlus5 = document.getElementById('btn-plus-5');
-  const btnTapTempo = document.getElementById('btn-tap-tempo');
-
-  const statusPill = document.getElementById('status-pill');
-  const statusText = document.getElementById('status-text');
-  const roomBadge = document.getElementById('room-badge');
-
-  const networkModeSelect = document.getElementById('network-mode-select');
-  const soundSelect = document.getElementById('sound-select');
-  const delaySlider = document.getElementById('delay-slider');
-  const delayValLabel = document.getElementById('delay-val-label');
-  const beatsSelectButtons = document.querySelectorAll('.segment-btn');
-  const flashToggle = document.getElementById('flash-toggle');
-  const wakeLockToggle = document.getElementById('wakelock-toggle');
-
-  const btnQrModal = document.getElementById('btn-qr-modal');
-  const qrModal = document.getElementById('qr-modal');
-  const btnCloseQr = document.getElementById('btn-close-qr');
-  const qrcodeContainer = document.getElementById('qrcode-canvas-container');
-  const wifiUrlInput = document.getElementById('wifi-url-input');
-  const btnCopyUrl = document.getElementById('btn-copy-url');
-
-  const audioUnlockBanner = document.getElementById('audio-unlock-banner');
+  const modal = el('qr-modal');
+  const pairingActions = el('pairing-actions');
+  const instructions = el('pairing-instructions');
+  const qrFrame = el('qr-frame-box');
+  const qrContainer = el('qrcode-canvas-container');
+  const scannerBox = el('scanner-box');
+  const video = el('qr-video');
+  const scanCanvas = el('qr-scan-canvas');
+  const codeBox = el('pairing-code-box');
+  const codeInput = el('pairing-code-input');
+  const pairingStatus = el('pairing-status');
+  const addDeviceButton = el('btn-add-device');
 
   let tapTimes = [];
-  let wakeLockSentinel = null;
+  let wakeLock = null;
+  let cameraStream = null;
+  let scanFrame = null;
+  let expectedCode = null;
 
-  roomBadge.textContent = `Room: ${initialRoom} ✎`;
-  networkModeSelect.value = initialMode;
+  const urlParams = new URLSearchParams(location.search);
+  const initialRoom = urlParams.get('room') || 'MAIN';
 
-  // Get exact full base URL (handles GitHub Pages repo subpaths)
-  function getAppBaseUrl() {
-    let url = window.location.href.split('?')[0].split('#')[0];
-    if (!url.endsWith('/') && !url.endsWith('.html')) {
-      url += '/';
-    }
-    return url;
-  }
-
-  // Tempo markings dictionary
-  function getTempoMarking(bpm) {
+  function tempoName(bpm) {
     if (bpm < 45) return 'Grave';
     if (bpm < 60) return 'Largo';
     if (bpm < 66) return 'Larghetto';
@@ -74,274 +57,255 @@ document.addEventListener('DOMContentLoaded', () => {
     return 'Prestissimo';
   }
 
-  // Update visual UI state
+  function renderDots() {
+    beatDots.innerHTML = '';
+    for (let i = 1; i <= sync.beatsPerMeasure; i += 1) {
+      const dot = document.createElement('div');
+      dot.className = 'beat-dot' + (i === 1 ? ' accent-spot' : '');
+      beatDots.appendChild(dot);
+    }
+    document.querySelectorAll('.segment-btn').forEach((button) => {
+      button.classList.toggle('active', parseInt(button.dataset.beats, 10) === sync.beatsPerMeasure);
+    });
+  }
+
   function updateUI() {
-    const bpm = sync.bpm;
-    bpmDisplay.textContent = bpm;
-    tempoSlider.value = bpm;
-    tempoMarking.textContent = getTempoMarking(bpm);
-
-    // Update circular SVG gauge
-    const minBpm = 30;
-    const maxBpm = 280;
-    const percent = (bpm - minBpm) / (maxBpm - minBpm);
-    const circumference = 2 * Math.PI * 90;
-    dialProgress.style.strokeDashoffset = circumference * (1 - percent);
-
-    // Update play button
+    bpmDisplay.textContent = sync.bpm;
+    tempoSlider.value = sync.bpm;
+    tempoMarking.textContent = tempoName(sync.bpm);
+    dialProgress.style.strokeDashoffset = 2 * Math.PI * 90 * (1 - (sync.bpm - 30) / 250);
+    roomBadge.textContent = 'Room: ' + sync.roomId;
     if (sync.isPlaying) {
       btnPlay.classList.add('playing');
-      playIcon.innerHTML = `<rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/>`;
+      playIcon.innerHTML = '<rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/>';
       playText.textContent = 'STOP SYNC';
     } else {
       btnPlay.classList.remove('playing');
-      playIcon.innerHTML = `<polygon points="5 3 19 12 5 21 5 3"/>`;
+      playIcon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"/>';
       playText.textContent = 'START SYNC';
-      clearActiveDots();
+      beatDots.querySelectorAll('.beat-dot').forEach((dot) => dot.classList.remove('active'));
     }
-
-    renderBeatDots();
+    renderDots();
   }
 
-  // Render beat dots
-  function renderBeatDots() {
-    const count = sync.beatsPerMeasure;
-    beatDotsContainer.innerHTML = '';
-    for (let i = 1; i <= count; i++) {
-      const dot = document.createElement('div');
-      dot.className = `beat-dot ${i === 1 ? 'accent-spot' : ''}`;
-      dot.dataset.beat = i;
-      beatDotsContainer.appendChild(dot);
-    }
-  }
-
-  function clearActiveDots() {
-    const dots = beatDotsContainer.querySelectorAll('.beat-dot');
-    dots.forEach((dot) => dot.classList.remove('active'));
-  }
-
-  // Beat tick callback for visual animations
-  sync.onBeat = (beatNumber, isAccent) => {
-    const dots = beatDotsContainer.querySelectorAll('.beat-dot');
-    dots.forEach((dot, idx) => {
-      if (idx + 1 === beatNumber) {
-        dot.classList.add('active');
-      } else {
-        dot.classList.remove('active');
-      }
+  sync.onBeat = (beat, accent) => {
+    beatDots.querySelectorAll('.beat-dot').forEach((dot, index) => {
+      dot.classList.toggle('active', index + 1 === beat);
     });
-
     if (flashToggle.checked) {
-      flashOverlay.className = isAccent ? 'flashing accent' : 'flashing';
-      setTimeout(() => {
-        flashOverlay.className = '';
-      }, 70);
+      flashOverlay.className = accent ? 'flashing accent' : 'flashing';
+      setTimeout(() => { flashOverlay.className = ''; }, 70);
     }
   };
-
-  sync.onStateChange = () => {
-    updateUI();
+  sync.onStateChange = updateUI;
+  sync.onConnectionChange = (connected, count, rtt, role) => {
+    statusPill.classList.toggle('connected', connected);
+    if (role === 'host') statusText.textContent = 'Host · ' + count + ' devices';
+    else if (role === 'guest' && connected) statusText.textContent = 'Joined · ' + (rtt ? rtt + 'ms' : 'syncing');
+    else if (role === 'guest') statusText.textContent = 'Pairing...';
+    else statusText.textContent = 'Standalone';
   };
 
-  sync.onConnectionChange = (connected, deviceCount, rtt, mode) => {
-    if (connected) {
-      statusPill.classList.add('connected');
-      const rttStr = rtt > 0 ? ` • ${rtt}ms` : '';
-      const modeLabel = mode === 'local' ? 'LAN' : 'Cloud';
-      statusText.textContent = `Synced (${modeLabel} • ${deviceCount} dev)${rttStr}`;
-    } else {
-      statusPill.classList.remove('connected');
-      statusText.textContent = 'Connecting...';
-    }
-  };
-
-  // Tempo Steppers
   function changeTempo(delta) {
-    const newBpm = Math.min(280, Math.max(30, sync.bpm + delta));
-    sync.sendTempo(newBpm);
+    sync.sendTempo(Math.min(280, Math.max(30, sync.bpm + delta)));
     updateUI();
   }
+  el('btn-minus-1').onclick = () => changeTempo(-1);
+  el('btn-plus-1').onclick = () => changeTempo(1);
+  el('btn-minus-5').onclick = () => changeTempo(-5);
+  el('btn-plus-5').onclick = () => changeTempo(5);
+  tempoSlider.oninput = (event) => { sync.sendTempo(parseInt(event.target.value, 10)); updateUI(); };
 
-  btnMinus1.addEventListener('click', () => changeTempo(-1));
-  btnPlus1.addEventListener('click', () => changeTempo(1));
-  btnMinus5.addEventListener('click', () => changeTempo(-5));
-  btnPlus5.addEventListener('click', () => changeTempo(5));
-
-  // Slider control
-  tempoSlider.addEventListener('input', (e) => {
-    const val = parseInt(e.target.value, 10);
-    sync.sendTempo(val);
-    updateUI();
-  });
-
-  // Tap Tempo Feature
-  btnTapTempo.addEventListener('click', () => {
+  el('btn-tap-tempo').onclick = () => {
     const now = performance.now();
     tapTimes.push(now);
-    tapTimes = tapTimes.filter((t) => now - t < 3000);
-
-    if (tapTimes.length >= 2) {
-      const intervals = [];
-      for (let i = 1; i < tapTimes.length; i++) {
-        intervals.push(tapTimes[i] - tapTimes[i - 1]);
-      }
-      const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-      let calculatedBpm = Math.round(60000 / avgInterval);
-      calculatedBpm = Math.min(280, Math.max(30, calculatedBpm));
-
-      sync.sendTempo(calculatedBpm);
+    tapTimes = tapTimes.filter((time) => now - time < 3000);
+    if (tapTimes.length > 1) {
+      const intervals = tapTimes.slice(1).map((time, index) => time - tapTimes[index]);
+      const bpm = Math.round(60000 / (intervals.reduce((a, b) => a + b, 0) / intervals.length));
+      sync.sendTempo(Math.min(280, Math.max(30, bpm)));
       updateUI();
     }
-  });
+  };
 
-  // Master Play / Stop button
-  btnPlay.addEventListener('click', () => {
+  btnPlay.onclick = () => {
     audio.init();
-    if (sync.isPlaying) {
-      sync.sendStop();
-    } else {
-      sync.sendStart(sync.bpm, sync.beatsPerMeasure);
-    }
+    if (sync.isPlaying) sync.sendStop();
+    else sync.sendStart(sync.bpm, sync.beatsPerMeasure);
+  };
+  document.querySelectorAll('.segment-btn').forEach((button) => {
+    button.onclick = () => { sync.sendBeatsPerMeasure(parseInt(button.dataset.beats, 10)); updateUI(); };
   });
+  soundSelect.onchange = (event) => sync.sendSoundType(event.target.value);
+  delaySlider.oninput = (event) => {
+    const value = parseInt(event.target.value, 10);
+    delayLabel.textContent = (value > 0 ? '+' : '') + value + ' ms';
+    sync.setHardwareDelay(value);
+  };
 
-  // Time Signature buttons
-  beatsSelectButtons.forEach((btn) => {
-    btn.addEventListener('click', () => {
-      beatsSelectButtons.forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      const beats = parseInt(btn.dataset.beats, 10);
-      sync.sendBeatsPerMeasure(beats);
-      renderBeatDots();
-    });
-  });
-
-  // Sound Type picker
-  soundSelect.addEventListener('change', (e) => {
-    sync.sendSoundType(e.target.value);
-  });
-
-  // Dual Network Mode Switcher
-  networkModeSelect.addEventListener('change', (e) => {
-    sync.init(sync.roomId, e.target.value);
-  });
-
-  // Hardware Delay Calibration Slider
-  delaySlider.addEventListener('input', (e) => {
-    const val = parseInt(e.target.value, 10);
-    delayValLabel.textContent = `${val > 0 ? '+' : ''}${val} ms`;
-    sync.setHardwareDelay(val);
-  });
-
-  // Screen Wake Lock API
   async function requestWakeLock() {
-    try {
-      if ('wakeLock' in navigator) {
-        wakeLockSentinel = await navigator.wakeLock.request('screen');
-      }
-    } catch (err) {
-      console.warn('Wake Lock error:', err);
-    }
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (_) {}
   }
-
-  wakeLockToggle.addEventListener('change', (e) => {
-    if (e.target.checked) {
-      requestWakeLock();
-    } else if (wakeLockSentinel) {
-      wakeLockSentinel.release();
-      wakeLockSentinel = null;
-    }
-  });
-
+  wakeToggle.onchange = () => {
+    if (wakeToggle.checked) requestWakeLock();
+    else if (wakeLock) { wakeLock.release(); wakeLock = null; }
+  };
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && wakeLockToggle.checked) {
-      requestWakeLock();
-    }
+    if (document.visibilityState === 'visible' && wakeToggle.checked) requestWakeLock();
   });
 
-  // Audio Unlock for iOS Safari & Android
-  function checkAudioUnlocked() {
-    if (audio.audioCtx && audio.audioCtx.state === 'suspended') {
-      audioUnlockBanner.classList.add('show');
-    } else {
-      audioUnlockBanner.classList.remove('show');
+  function unlockAudio() {
+    audio.init();
+    audioBanner.classList.toggle('show', Boolean(audio.audioCtx && audio.audioCtx.state === 'suspended'));
+  }
+  audioBanner.onclick = unlockAudio;
+  document.body.addEventListener('touchstart', unlockAudio, { once: true });
+  document.body.addEventListener('click', unlockAudio, { once: true });
+
+  roomBadge.onclick = () => {
+    const value = prompt('Room name:', sync.roomId);
+    if (value) { sync.init(value); updateUI(); }
+  };
+
+  function show(node, visible) { node.classList.toggle('pairing-hidden', !visible); }
+  function renderQr(code) {
+    qrContainer.innerHTML = '';
+    show(qrFrame, true);
+    new QRCode(qrContainer, {
+      text: code, width: 220, height: 220,
+      colorDark: '#0a0e1a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.L
+    });
+  }
+
+  function resetPairingView() {
+    stopScanner();
+    pairingActions.classList.remove('pairing-hidden');
+    show(qrFrame, false);
+    show(scannerBox, false);
+    show(codeBox, false);
+    show(addDeviceButton, false);
+    codeInput.value = '';
+    pairingStatus.textContent = '';
+    expectedCode = null;
+    instructions.textContent = 'Keep all devices on the same Wi-Fi or hotspot. No beat data is sent to the internet.';
+  }
+
+  async function createInvitation() {
+    stopScanner();
+    pairingActions.classList.add('pairing-hidden');
+    show(codeBox, true);
+    show(addDeviceButton, false);
+    pairingStatus.textContent = 'Creating a local invitation...';
+    try {
+      const code = await sync.createHostOffer();
+      codeInput.value = code;
+      renderQr(code);
+      expectedCode = 'answer';
+      instructions.textContent = 'On the other device choose Join and scan this invitation. Then scan its response QR here.';
+      pairingStatus.textContent = 'Invitation ready. Camera is scanning for the response.';
+      await startScanner();
+    } catch (error) { pairingStatus.textContent = error.message; }
+  }
+
+  async function joinRoom() {
+    pairingActions.classList.add('pairing-hidden');
+    show(qrFrame, false);
+    show(codeBox, true);
+    expectedCode = 'offer';
+    instructions.textContent = 'Scan the invitation shown on the host device, or paste its pairing code.';
+    pairingStatus.textContent = 'Camera is looking for an invitation...';
+    await startScanner();
+  }
+
+  async function applyCode(raw) {
+    if (!raw || !expectedCode) return;
+    stopScanner();
+    pairingStatus.textContent = 'Applying pairing data...';
+    try {
+      if (expectedCode === 'offer') {
+        const answer = await sync.acceptOffer(raw);
+        codeInput.value = answer;
+        renderQr(answer);
+        expectedCode = null;
+        instructions.textContent = 'Show this response QR to the host device. The connection completes when the host scans it.';
+        pairingStatus.textContent = 'Response ready.';
+      } else {
+        await sync.acceptAnswer(raw);
+        expectedCode = null;
+        show(scannerBox, false);
+        show(qrFrame, false);
+        show(codeBox, false);
+        show(addDeviceButton, true);
+        pairingStatus.textContent = 'Response accepted. Waiting for the direct connection...';
+      }
+    } catch (error) {
+      pairingStatus.textContent = error.message;
+      if (expectedCode) await startScanner();
     }
   }
 
-  audioUnlockBanner.addEventListener('click', () => {
-    audio.init();
-    checkAudioUnlocked();
-  });
-
-  document.body.addEventListener('touchstart', () => {
-    audio.init();
-    checkAudioUnlocked();
-  }, { once: true });
-
-  document.body.addEventListener('click', () => {
-    audio.init();
-    checkAudioUnlocked();
-  }, { once: true });
-
-  // Room Customization
-  roomBadge.addEventListener('click', () => {
-    const current = sync.roomId;
-    const nextRoom = prompt('Enter Room Code for Band / Group Sync:', current);
-    if (nextRoom && nextRoom.trim() !== '') {
-      const roomClean = nextRoom.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') || 'MAIN';
-      roomBadge.textContent = `Room: ${roomClean} ✎`;
-      sync.init(roomClean, sync.mode);
+  async function startScanner() {
+    if (!expectedCode || cameraStream) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      pairingStatus.textContent = 'Camera scanning is unavailable. Use Copy/Paste code instead.';
+      return;
     }
-  });
-
-  // Render client-side QR Code
-  function renderQrCode(targetUrl) {
-    qrcodeContainer.innerHTML = '';
-    wifiUrlInput.value = targetUrl;
-    if (typeof QRCode !== 'undefined') {
-      new QRCode(qrcodeContainer, {
-        text: targetUrl,
-        width: 190,
-        height: 190,
-        colorDark: '#0a0e1a',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } }, audio: false
       });
+      video.srcObject = cameraStream;
+      await video.play();
+      show(scannerBox, true);
+      scanLoop();
+    } catch (_) {
+      pairingStatus.textContent = 'Camera permission was not granted. Use Copy/Paste code instead.';
     }
   }
 
-  // Wi-Fi / Room QR Code Modal
-  btnQrModal.addEventListener('click', () => {
-    const currentRoom = sync.roomId;
-    const mode = sync.mode;
-    const shareUrl = `${getAppBaseUrl()}?room=${encodeURIComponent(currentRoom)}&mode=${mode}`;
-    renderQrCode(shareUrl);
-    qrModal.classList.add('open');
-  });
-
-  btnCloseQr.addEventListener('click', () => {
-    qrModal.classList.remove('open');
-  });
-
-  qrModal.addEventListener('click', (e) => {
-    if (e.target === qrModal) qrModal.classList.remove('open');
-  });
-
-  btnCopyUrl.addEventListener('click', () => {
-    wifiUrlInput.select();
-    navigator.clipboard.writeText(wifiUrlInput.value).then(() => {
-      btnCopyUrl.textContent = 'Copied!';
-      setTimeout(() => (btnCopyUrl.textContent = 'Copy'), 1500);
-    });
-  });
-
-  // Start Sync Engine
-  sync.init(initialRoom, initialMode);
-  updateUI();
-
-  // Register PWA Service Worker
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch((err) => {
-      console.warn('Service worker registration failed:', err);
-    });
+  function scanLoop() {
+    if (!cameraStream) return;
+    if (video.readyState >= 2 && video.videoWidth) {
+      const context = scanCanvas.getContext('2d', { willReadFrequently: true });
+      scanCanvas.width = video.videoWidth;
+      scanCanvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0);
+      const image = context.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
+      const result = window.jsQR && window.jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' });
+      if (result && result.data) { applyCode(result.data); return; }
+    }
+    scanFrame = requestAnimationFrame(scanLoop);
   }
+
+  function stopScanner() {
+    if (scanFrame) cancelAnimationFrame(scanFrame);
+    scanFrame = null;
+    if (cameraStream) cameraStream.getTracks().forEach((track) => track.stop());
+    cameraStream = null;
+    video.srcObject = null;
+    show(scannerBox, false);
+  }
+
+  el('btn-qr-modal').onclick = () => { resetPairingView(); modal.classList.add('open'); };
+  el('btn-create-room').onclick = createInvitation;
+  el('btn-join-room').onclick = joinRoom;
+  addDeviceButton.onclick = createInvitation;
+  el('btn-apply-code').onclick = () => applyCode(codeInput.value);
+  el('btn-copy-code').onclick = async () => {
+    await navigator.clipboard.writeText(codeInput.value);
+    pairingStatus.textContent = 'Pairing code copied.';
+  };
+  el('btn-paste-code').onclick = async () => {
+    try { codeInput.value = await navigator.clipboard.readText(); pairingStatus.textContent = 'Code pasted. Tap Use code.'; }
+    catch (_) { pairingStatus.textContent = 'Paste permission denied. Long-press the text box to paste.'; }
+  };
+  el('btn-close-qr').onclick = () => { stopScanner(); modal.classList.remove('open'); };
+  modal.onclick = (event) => {
+    if (event.target === modal) { stopScanner(); modal.classList.remove('open'); }
+  };
+
+  sync.init(initialRoom);
+  updateUI();
+  if (wakeToggle.checked) requestWakeLock();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.warn);
 });

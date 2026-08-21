@@ -1,7 +1,7 @@
 {
   "name": "Sync Metronome - Beat Sync",
   "short_name": "SyncBeat",
-  "description": "Sub-millisecond synchronized metronome for bands & ensembles over any Wi-Fi or internet",
+  "description": "Offline peer-to-peer metronome sync over local Wi-Fi or a hotspot",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait-primary",

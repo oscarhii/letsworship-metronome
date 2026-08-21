@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="description" content="Sub-millisecond synchronized metronome for bands & ensembles over any Wi-Fi or internet. Works seamlessly on iOS Safari, Android Chrome, and Desktop.">
+  <meta name="description" content="Offline peer-to-peer synchronized metronome for iOS and Android over local Wi-Fi or a hotspot.">
   <meta name="theme-color" content="#0a0e1a">
 
   <!-- iOS PWA Meta Tags -->
@@ -16,7 +16,7 @@
   <link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
   <link rel="stylesheet" href="./css/style.css">
 
-  <title>Sync Metronome • Dual-Mode Beat Synchronizer</title>
+  <title>SyncBeat - Offline Wi-Fi Metronome</title>
 </head>
 <body>
   <!-- Visual Screen Flash Overlay -->
@@ -37,7 +37,7 @@
       <div class="header-actions">
         <div class="status-pill" id="status-pill">
           <span class="status-dot"></span>
-          <span id="status-text">Connecting...</span>
+          <span id="status-text">Standalone</span>
         </div>
 
         <button class="btn-icon" id="btn-qr-modal" title="Room QR Code / Share" aria-label="Share Room QR Code">
@@ -118,13 +118,10 @@
 
     <!-- Secondary Settings Card -->
     <section class="card-secondary">
-      <!-- Sync Network Mode (Dual Mode) -->
+      <!-- Local-only sync status -->
       <div class="setting-group">
         <span class="setting-label">Sync Mode</span>
-        <select id="network-mode-select" style="background: rgba(10,14,26,0.8); color: var(--accent-cyan); border: 1px solid rgba(255,255,255,0.15); padding: 6px 12px; border-radius: var(--radius-sm); font-weight: 600; outline: none; cursor: pointer;">
-          <option value="cloud">🌐 Cloud Sync (Any Wi-Fi / 4G)</option>
-          <option value="local">📶 Local Wi-Fi (LAN Server)</option>
-        </select>
+        <span class="local-only-label">Offline Wi-Fi / Hotspot</span>
       </div>
 
       <!-- Beats Per Measure (Time Signature) -->
@@ -177,21 +174,37 @@
     </section>
   </main>
 
-  <!-- Wi-Fi / Room QR Code Modal -->
+  <!-- Offline WebRTC pairing modal -->
   <div class="modal-backdrop" id="qr-modal">
     <div class="modal-dialog">
-      <h2 class="modal-title">📱 Sync with Other Phones</h2>
-      <p class="modal-desc">Scan this QR Code on other phones to connect to the exact same room:</p>
+      <h2 class="modal-title">Connect devices offline</h2>
+      <p class="modal-desc" id="pairing-instructions">Keep all devices on the same Wi-Fi or hotspot. No beat data is sent to the internet.</p>
 
-      <div class="qr-frame" id="qr-frame-box">
+      <div class="pairing-actions" id="pairing-actions">
+        <button class="btn-pair-primary" id="btn-create-room">Create room on this device</button>
+        <button class="btn-pair-secondary" id="btn-join-room">Join another device</button>
+      </div>
+
+      <div class="qr-frame pairing-hidden" id="qr-frame-box">
         <div id="qrcode-canvas-container"></div>
       </div>
 
-      <div class="network-url-box">
-        <input type="text" id="wifi-url-input" readonly value="">
-        <button class="btn-step" id="btn-copy-url" style="padding: 4px 10px; font-size: 0.75rem;">Copy</button>
+      <div class="scanner-box pairing-hidden" id="scanner-box">
+        <video id="qr-video" playsinline muted></video>
+        <canvas id="qr-scan-canvas"></canvas>
       </div>
 
+      <div class="pairing-code-box pairing-hidden" id="pairing-code-box">
+        <textarea id="pairing-code-input" placeholder="Pairing code"></textarea>
+        <div class="pairing-inline-actions">
+          <button class="btn-pair-secondary" id="btn-copy-code">Copy code</button>
+          <button class="btn-pair-secondary" id="btn-paste-code">Paste code</button>
+          <button class="btn-pair-primary" id="btn-apply-code">Use code</button>
+        </div>
+      </div>
+
+      <p class="pairing-status" id="pairing-status" role="status"></p>
+      <button class="btn-pair-secondary pairing-hidden" id="btn-add-device">Add another device</button>
       <button class="btn-modal-close" id="btn-close-qr">Close</button>
     </div>
   </div>
@@ -203,8 +216,8 @@
   </div>
 
   <!-- Scripts -->
-  <script src="./js/mqtt.min.js"></script>
   <script src="./js/qrcode.min.js"></script>
+  <script src="./js/jsQR.js"></script>
   <script src="./js/audio.js"></script>
   <script src="./js/sync.js"></script>
   <script src="./js/app.js"></script>

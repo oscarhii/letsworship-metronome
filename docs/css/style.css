@@ -626,6 +626,65 @@ input:checked + .toggle-slider:before {
   background: rgba(255, 255, 255, 0.2);
 }
 
+.local-only-label {
+  color: var(--accent-green);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.pairing-hidden { display: none !important; }
+.pairing-actions, .pairing-inline-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+.pairing-actions { flex-direction: column; }
+.btn-pair-primary, .btn-pair-secondary {
+  flex: 1;
+  border-radius: var(--radius-sm);
+  padding: 11px 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-pair-primary {
+  color: #031127;
+  background: var(--accent-cyan);
+  border: 1px solid var(--accent-cyan);
+}
+.btn-pair-secondary {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.pairing-code-box { width: 100%; }
+.pairing-code-box textarea {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  user-select: text;
+  -webkit-user-select: text;
+  color: var(--accent-cyan);
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  margin-bottom: 8px;
+  font: 0.72rem monospace;
+}
+.scanner-box {
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: #000;
+}
+.scanner-box video { width: 100%; display: block; }
+.scanner-box canvas { display: none; }
+.pairing-status {
+  min-height: 1.4em;
+  color: var(--accent-cyan);
+  font-size: 0.85rem;
+}
+
 /* Audio unlock banner for iOS / Android */
 .audio-unlock-banner {
   position: fixed;
