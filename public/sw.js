@@ -1,10 +1,11 @@
-const CACHE_NAME = 'sync-metronome-v5-offline-webrtc';
+const CACHE_NAME = 'sync-metronome-v6-compressed-pairing';
 const ASSETS = [
   './',
   './index.html',
   './css/style.css',
   './js/qrcode.min.js',
   './js/jsQR.js',
+  './js/pako.min.js',
   './js/audio.js',
   './js/sync.js',
   './js/app.js',

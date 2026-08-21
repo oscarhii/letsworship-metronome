@@ -561,6 +561,8 @@ input:checked + .toggle-slider:before {
   gap: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   text-align: center;
+  max-height: 92vh;
+  overflow-y: auto;
 }
 
 .modal-title {
@@ -585,8 +587,8 @@ input:checked + .toggle-slider:before {
   box-shadow: 0 8px 24px rgba(0, 242, 254, 0.2);
 }
 .qr-frame img {
-  width: 200px;
-  height: 200px;
+  width: min(220px, 68vw);
+  height: min(220px, 68vw);
   display: block;
 }
 
@@ -677,7 +679,12 @@ input:checked + .toggle-slider:before {
   border-radius: var(--radius-md);
   background: #000;
 }
-.scanner-box video { width: 100%; display: block; }
+.scanner-box video {
+  width: 100%;
+  height: min(230px, 42vh);
+  object-fit: cover;
+  display: block;
+}
 .scanner-box canvas { display: none; }
 .pairing-status {
   min-height: 1.4em;

@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const codeInput = el('pairing-code-input');
   const pairingStatus = el('pairing-status');
   const addDeviceButton = el('btn-add-device');
+  const scanResponseButton = el('btn-scan-response');
 
   let tapTimes = [];
   let wakeLock = null;
@@ -183,6 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
     show(qrFrame, false);
     show(scannerBox, false);
     show(codeBox, false);
+    show(scanResponseButton, false);
     show(addDeviceButton, false);
     codeInput.value = '';
     pairingStatus.textContent = '';
@@ -201,9 +203,9 @@ document.addEventListener('DOMContentLoaded', () => {
       codeInput.value = code;
       renderQr(code);
       expectedCode = 'answer';
-      instructions.textContent = 'On the other device choose Join and scan this invitation. Then scan its response QR here.';
-      pairingStatus.textContent = 'Invitation ready. Camera is scanning for the response.';
-      await startScanner();
+      show(scanResponseButton, true);
+      instructions.textContent = 'Let the other device scan this invitation. When it shows a response QR, tap Scan response QR.';
+      pairingStatus.textContent = 'Invitation ready.';
     } catch (error) { pairingStatus.textContent = error.message; }
   }
 
@@ -211,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     pairingActions.classList.add('pairing-hidden');
     show(qrFrame, false);
     show(codeBox, true);
+    show(scanResponseButton, false);
     expectedCode = 'offer';
     instructions.textContent = 'Scan the invitation shown on the host device, or paste its pairing code.';
     pairingStatus.textContent = 'Camera is looking for an invitation...';
@@ -227,11 +230,13 @@ document.addEventListener('DOMContentLoaded', () => {
         codeInput.value = answer;
         renderQr(answer);
         expectedCode = null;
+        show(scanResponseButton, false);
         instructions.textContent = 'Show this response QR to the host device. The connection completes when the host scans it.';
         pairingStatus.textContent = 'Response ready.';
       } else {
         await sync.acceptAnswer(raw);
         expectedCode = null;
+        show(scanResponseButton, false);
         show(scannerBox, false);
         show(qrFrame, false);
         show(codeBox, false);
@@ -289,6 +294,12 @@ document.addEventListener('DOMContentLoaded', () => {
   el('btn-qr-modal').onclick = () => { resetPairingView(); modal.classList.add('open'); };
   el('btn-create-room').onclick = createInvitation;
   el('btn-join-room').onclick = joinRoom;
+  scanResponseButton.onclick = async () => {
+    show(qrFrame, false);
+    show(scanResponseButton, false);
+    pairingStatus.textContent = 'Camera is looking for the response QR...';
+    await startScanner();
+  };
   addDeviceButton.onclick = createInvitation;
   el('btn-apply-code').onclick = () => applyCode(codeInput.value);
   el('btn-copy-code').onclick = async () => {

@@ -70,9 +70,30 @@ class MetronomeSyncEngine {
     });
   }
 
+  static encodeCode(data) {
+    if (!window.pako) throw new Error('Pairing compressor is unavailable.');
+    const bytes = window.pako.deflate(JSON.stringify(data), { level: 9 });
+    let binary = '';
+    for (let offset = 0; offset < bytes.length; offset += 8192) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(offset, offset + 8192));
+    }
+    return 'SB1.' + btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  static decodeCode(raw) {
+    const value = (raw || '').trim();
+    if (!value.startsWith('SB1.')) return JSON.parse(value);
+    if (!window.pako) throw new Error('Pairing decompressor is unavailable.');
+    let base64 = value.slice(4).replace(/-/g, '+').replace(/_/g, '/');
+    base64 += '='.repeat((4 - base64.length % 4) % 4);
+    const binary = atob(base64);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    return JSON.parse(window.pako.inflate(bytes, { to: 'string' }));
+  }
+
   static parseCode(raw, kind) {
     let data;
-    try { data = JSON.parse((raw || '').trim()); } catch (_) { throw new Error('Invalid pairing code.'); }
+    try { data = MetronomeSyncEngine.decodeCode(raw); } catch (_) { throw new Error('Invalid pairing code.'); }
     if (data.app !== 'syncbeat' || data.version !== 1 || data.kind !== kind || !data.sdp) {
       throw new Error('This is not the expected SyncBeat pairing code.');
     }
@@ -91,7 +112,7 @@ class MetronomeSyncEngine {
     await pc.setLocalDescription(await pc.createOffer());
     await MetronomeSyncEngine.waitForIce(pc);
     this.notifyConnection();
-    return JSON.stringify({
+    return MetronomeSyncEngine.encodeCode({
       app: 'syncbeat', version: 1, kind: 'offer', exchangeId,
       roomId: this.roomId, hostId: this.deviceId, sdp: pc.localDescription
     });
@@ -108,7 +129,7 @@ class MetronomeSyncEngine {
     await pc.setLocalDescription(await pc.createAnswer());
     await MetronomeSyncEngine.waitForIce(pc);
     this.notifyConnection();
-    return JSON.stringify({
+    return MetronomeSyncEngine.encodeCode({
       app: 'syncbeat', version: 1, kind: 'answer', exchangeId: offer.exchangeId,
       roomId: this.roomId, guestId: this.deviceId, sdp: pc.localDescription
     });

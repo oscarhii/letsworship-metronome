@@ -9,6 +9,7 @@ const required = [
   'public/js/app.js',
   'public/js/qrcode.min.js',
   'public/js/jsQR.js',
+  'public/js/pako.min.js',
   'public/sw.js',
   'public/manifest.json'
 ];
@@ -27,5 +28,12 @@ if (/mqtt|broker\.emqx|WebSocket\(/i.test(syncSource + html + sw)) {
 if (!syncSource.includes('iceServers: []')) throw new Error('WebRTC is not restricted to LAN ICE candidates.');
 if (!html.includes('./js/jsQR.js')) throw new Error('Offline QR scanner is not loaded.');
 if (!sw.includes('./js/jsQR.js')) throw new Error('Offline QR scanner is not cached.');
+if (!html.includes('./js/pako.min.js')) throw new Error('Pairing compressor is not loaded.');
+if (!sw.includes('./js/pako.min.js')) throw new Error('Pairing compressor is not cached.');
+
+const pako = require('pako');
+const sampleSdp = 'candidate:192.168.1.20 '.repeat(150);
+const compressed = pako.deflate(JSON.stringify({ app: 'syncbeat', sdp: sampleSdp }));
+if (compressed.length >= sampleSdp.length / 2) throw new Error('Pairing payload compression is ineffective.');
 
 console.log('Offline WebRTC PWA checks passed.');
