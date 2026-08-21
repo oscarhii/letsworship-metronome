@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sync-metronome-v7-ios-safe-area';
+const CACHE_NAME = 'syncbeat-worship-v8';
 const ASSETS = [
   './',
   './index.html',

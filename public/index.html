@@ -47,6 +47,7 @@
         </button>
       </div>
     </header>
+    <nav class='mode-switch'><button class='mode-btn active' data-mode='practice'>練習模式<small>PRACTICE</small></button><button class='mode-btn' data-mode='worship'>敬拜歌單<small>SETLIST</small></button></nav>
 
     <!-- Main Metronome Centerpiece -->
     <section class="card-main">
@@ -171,6 +172,23 @@
           <span class="toggle-slider"></span>
         </label>
       </div>
+    </section>
+    <section class='card-secondary worship-tools'>
+      <div class='setting-group'><span class='setting-label'>練習歌曲結構</span><button class='mini-action' id='load-song'>從歌單載入</button></div>
+      <div class='section-strip' id='practice-sections'></div>
+    </section>
+    <section class='card-secondary worship-tools'>
+      <div class='setting-group'><span class='setting-label'>即時樂手提示</span><span class='local-only-label'>點擊即傳送</span></div>
+      <div class='cue-tabs' id='cue-tabs'></div><div class='cue-grid' id='cue-grid'></div>
+      <div class='custom-cue'><input id='custom-cue' maxlength='40' placeholder='輸入自訂提示…'><button id='send-custom-cue'>傳送</button></div>
+    </section>
+    <section class='worship-panel mode-panel-hidden' id='worship-panel'>
+      <div class='setlist-hero'><small>目前歌單</small><h2 id='setlist-name'>主日敬拜</h2><p>點選歌曲即可載入節奏與流程</p></div>
+      <div class='card-main now-playing' id='now-playing'></div>
+      <div class='song-transport'><button id='prev-song'>← 上一首</button><button id='worship-play' class='round-play'>▶</button><button id='next-song'>下一首 →</button></div>
+      <section class='card-secondary'><div class='setting-group'><span class='setting-label'>歌曲流程</span><button class='mini-action' id='advance-section'>下一段 →</button></div><div id='song-sections' class='section-strip'></div></section>
+      <section class='card-secondary'><div class='setting-group'><span class='setting-label'>敬拜歌單</span><button class='mini-action' id='add-song'>＋ 新增歌曲</button></div><div id='song-list' class='song-list'></div></section>
+      <section class='card-secondary'><div class='setting-group'><span class='setting-label'>即時提示</span><span class='local-only-label'>同步顯示</span></div><div id='worship-cues' class='cue-grid'></div></section>
     </section>
   </main>
 

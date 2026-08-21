@@ -315,6 +315,60 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.target === modal) { stopScanner(); modal.classList.remove('open'); }
   };
 
+  // Practice and worship features ported from the Android app.
+  const defaults = [
+    {title:'何等恩典',artist:'敬拜團',bpm:72,key:'D',signature:'4/4',sections:['Intro','Verse 1','Chorus ×2','Bridge','Ending']},
+    {title:'祢真偉大',artist:'Traditional',bpm:78,key:'G',signature:'4/4',sections:['Intro','Verse','Chorus','Verse 2','Chorus','Ending']},
+    {title:'我神真偉大',artist:'Chris Tomlin',bpm:76,key:'A',signature:'4/4',sections:['Intro','Verse','Chorus ×2','Bridge ×2','Final Chorus']}
+  ];
+  let songs; try { songs=JSON.parse(localStorage.getItem('syncbeat-songs'))||defaults; } catch(_){ songs=defaults; }
+  let currentSong=0,currentSection=0,activeCategory='結構';
+  const cueData={
+    '結構':['Intro','Verse 1','Pre-Chorus','Chorus','Bridge','Ending'],
+    '樂器':['All In','Keys Only','Guitar Only','Drums In','Bass In','A Cappella'],
+    '動態':['Build Up','Breakdown','Hold','快一點 +5','慢一點 −5'],
+    '結尾':['再一次','Tag','Ending','全停 CUT']
+  };
+  const directCards=()=>[...document.querySelectorAll('.app-container > .card-main,.app-container > .card-secondary')];
+  function setMode(mode){
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+    directCards().forEach(n=>n.classList.toggle('mode-panel-hidden',mode==='worship'));
+    el('worship-panel').classList.toggle('mode-panel-hidden',mode!=='worship');
+    if(mode==='worship') renderWorship();
+  }
+  document.querySelectorAll('.mode-btn').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+  function renderSections(target,sections,selected=-1){
+    target.innerHTML=sections.map((s,i)=>'<button class=\'section-chip '+(i===selected?'active':'')+'\' data-index=\''+i+'\'><b>'+s+'</b><small>'+(i===selected?'目前段落':'點選跳轉')+'</small></button>').join('');
+  }
+  function selectSong(index){
+    currentSong=(index+songs.length)%songs.length;currentSection=0;const s=songs[currentSong];
+    sync.sendTempo(s.bpm);const beats=parseInt(s.signature,10)||4;sync.sendBeatsPerMeasure(beats);updateUI();renderWorship();
+  }
+  function renderWorship(){
+    const s=songs[currentSong]||defaults[0];
+    el('now-playing').innerHTML='<span class=\'song-meta\'>NOW PLAYING · '+s.key+' · '+s.signature+'</span><h2>'+s.title+'</h2><p>'+s.artist+' · '+s.bpm+' BPM</p>';
+    renderSections(el('song-sections'),s.sections,currentSection);
+    el('song-sections').querySelectorAll('button').forEach(b=>b.onclick=()=>{currentSection=+b.dataset.index;renderWorship();});
+    el('song-list').innerHTML=songs.map((x,i)=>'<button class=\'song-row '+(i===currentSong?'active':'')+'\' data-index=\''+i+'\'><b>'+(i+1)+'</b><span>'+x.title+'<small>'+x.artist+'</small></span><em>'+x.bpm+' BPM<br>'+x.key+'</em></button>').join('');
+    el('song-list').querySelectorAll('button').forEach(b=>b.onclick=()=>selectSong(+b.dataset.index));
+  }
+  function showCue(text){
+    let banner=el('live-cue');if(!banner){banner=document.createElement('div');banner.id='live-cue';banner.className='live-cue';document.body.appendChild(banner);}banner.textContent=text;banner.classList.add('show');setTimeout(()=>banner.classList.remove('show'),2200);
+    if(text.includes('+5')) changeTempo(5);if(text.includes('−5')) changeTempo(-5);
+  }
+  function renderCues(){
+    el('cue-tabs').innerHTML=Object.keys(cueData).map(x=>'<button class=\''+(x===activeCategory?'active':'')+'\'>'+x+'</button>').join('');
+    el('cue-tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{activeCategory=b.textContent;renderCues();});
+    const html=cueData[activeCategory].map(x=>'<button>'+x+'</button>').join('');el('cue-grid').innerHTML=html;el('worship-cues').innerHTML=cueData['結構'].slice(0,6).map(x=>'<button>'+x+'</button>').join('');
+    document.querySelectorAll('#cue-grid button,#worship-cues button').forEach(b=>b.onclick=()=>showCue(b.textContent));
+  }
+  renderSections(el('practice-sections'),defaults[0].sections);renderCues();renderWorship();
+  el('prev-song').onclick=()=>selectSong(currentSong-1);el('next-song').onclick=()=>selectSong(currentSong+1);
+  el('worship-play').onclick=()=>btnPlay.click();el('advance-section').onclick=()=>{currentSection=(currentSection+1)%songs[currentSong].sections.length;renderWorship();};
+  el('load-song').onclick=()=>{const s=songs[currentSong];renderSections(el('practice-sections'),s.sections);showCue('已載入 '+s.title);};
+  el('send-custom-cue').onclick=()=>{const input=el('custom-cue');if(input.value.trim()){showCue(input.value.trim());input.value='';}};
+  el('add-song').onclick=()=>{const title=prompt('歌曲名稱');if(!title)return;const bpm=Math.max(20,Math.min(300,parseInt(prompt('BPM','120'),10)||120));songs.push({title,artist:'',bpm,key:'C',signature:'4/4',sections:['Intro','Verse','Chorus','Ending']});localStorage.setItem('syncbeat-songs',JSON.stringify(songs));selectSong(songs.length-1);};
+
   sync.init(initialRoom);
   updateUI();
   if (wakeToggle.checked) requestWakeLock();
