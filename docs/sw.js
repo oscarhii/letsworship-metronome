@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sync-metronome-v6-compressed-pairing';
+const CACHE_NAME = 'sync-metronome-v7-ios-safe-area';
 const ASSETS = [
   './',
   './index.html',
