@@ -1,4 +1,4 @@
-const CACHE_NAME = 'syncbeat-worship-v8';
+const CACHE_NAME = 'syncbeat-worship-v9-full-ui';
 const ASSETS = [
   './',
   './index.html',
