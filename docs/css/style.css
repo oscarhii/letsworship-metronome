@@ -744,3 +744,739 @@ input:checked + .toggle-slider:before {
 @media(max-width:480px){.app-container{padding-left:14px;padding-right:14px}.cue-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 /* Full Android information architecture */
 .worship-tabs{display:grid;grid-template-columns:1fr 1fr;background:#111827;border:1px solid #29364b;border-radius:13px;padding:5px;margin-bottom:14px}.worship-tabs button{border:0;background:transparent;color:#8290a6;border-radius:9px;padding:10px;font-weight:900}.worship-tabs button small{display:block;font-size:9px;letter-spacing:1px;margin-top:2px}.worship-tabs button.active{background:#00dfe9;color:#071018}.worship-tabs button:nth-child(2).active{background:#f6c85f}.practice-song-fields{display:grid;grid-template-columns:1fr 70px 80px;gap:8px;margin:9px 0}.practice-song-fields input,.app-dialog input,.app-dialog textarea,.app-dialog select{box-sizing:border-box;width:100%;background:#09111d;color:#e8eef8;border:1px solid #344158;border-radius:9px;padding:11px;font:inherit}.practice-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}.practice-actions button,.setlist-toolbar button{border:1px solid #344158;background:#111b2a;color:#cbd6e7;border-radius:8px;padding:8px}.setlist-info{padding:12px;background:#0d1725;border-left:3px solid #f6c85f;border-radius:8px;margin-bottom:10px;color:#cbd6e7}.setlist-info b{color:#f6c85f}.setlist-info small{display:block;margin-top:5px;color:#8d9bb0}.setlist-toolbar{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:14px}.song-row{grid-template-columns:32px 1fr auto!important}.song-row .row-main{cursor:pointer}.song-actions{display:flex;gap:5px;grid-column:2/4;justify-content:flex-end}.song-actions button{border:1px solid #344158;background:#172235;color:#cbd6e7;border-radius:7px;padding:6px 8px}.song-actions .danger{color:#ff7a86}.song-row.hidden-song{opacity:.48}.live-control-hidden{display:none!important}.setlist-control-hidden{display:none!important}.app-dialog{border:1px solid #344158;background:#111827;color:#e7edf6;border-radius:16px;width:min(92vw,620px);max-height:88vh;padding:0;box-shadow:0 30px 90px #000}.app-dialog::backdrop{background:#02050bcc;backdrop-filter:blur(5px)}.app-dialog form{padding:18px;overflow:auto;max-height:82vh}.app-dialog header{display:flex;justify-content:space-between;align-items:center}.app-dialog header button{border:0;background:transparent;color:white;font-size:24px}.app-dialog label{display:block;color:#91a0b6;font-size:12px;font-weight:700;margin:12px 0 5px}.app-dialog .field-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0 10px}.app-dialog menu{display:flex;justify-content:flex-end;gap:8px;padding:14px 0 0}.app-dialog menu button{border:1px solid #344158;background:#172235;color:white;border-radius:9px;padding:10px 16px}.app-dialog menu .primary{background:#f6c85f;color:#151006;border:0;font-weight:900}.section-editor-list{display:grid;gap:7px;margin-top:10px}.section-edit-row{display:grid;grid-template-columns:1fr 68px 34px;gap:6px}.toast-note{color:#00dfe9;font-size:12px}@media(max-width:520px){.setlist-toolbar{grid-template-columns:repeat(2,1fr)}.practice-song-fields{grid-template-columns:1fr 58px 68px}.app-dialog .field-grid{grid-template-columns:1fr}}
+/* Motion, swipe navigation, beat accents and stage cue pad */
+@keyframes view-in{from{opacity:0;transform:translateY(10px) scale(.99)}to{opacity:1;transform:none}}@keyframes cue-pop{0%{transform:scale(.94)}55%{transform:scale(1.03)}100%{transform:scale(1)}}
+.worship-panel:not(.mode-panel-hidden),.app-container>.card-main:not(.mode-panel-hidden),.app-container>.worship-tools:not(.mode-panel-hidden){animation:view-in .3s cubic-bezier(.2,.8,.2,1)}.card-main,.card-secondary,.mode-btn,.worship-tabs button,.section-chip,.cue-button{transition:background .22s,border-color .22s,color .22s,transform .22s,box-shadow .22s,opacity .22s}.section-chip:active,.cue-button:active{transform:scale(.96)}
+.beat-dots-container{align-items:end}.beat-dot{appearance:none;padding:0;cursor:pointer;position:relative;transition:transform .18s,opacity .18s,background .18s,box-shadow .18s;border:0}.beat-dot:after{position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);font-size:8px;font-weight:900;color:#64748b}.beat-dot.accent-accent{width:22px;height:22px;background:#00e5ff;box-shadow:0 0 18px #00e5ff99}.beat-dot.accent-accent:after{content:'強'}.beat-dot.accent-normal{background:#6366f1}.beat-dot.accent-normal:after{content:'中'}.beat-dot.accent-soft{width:12px;height:12px;background:#64748b;opacity:.7}.beat-dot.accent-soft:after{content:'弱'}.beat-dot.accent-muted{background:transparent;border:2px solid #334155;opacity:.55}.beat-dot.accent-muted:before{content:'';position:absolute;width:13px;height:2px;background:#64748b;transform:rotate(-45deg);left:1px;top:7px}.beat-dot.accent-muted:after{content:'靜'}.beat-dot.active{transform:scale(1.35);box-shadow:0 0 24px currentColor}
+.cue-tabs button{display:flex;align-items:center;gap:6px;white-space:nowrap}.cue-tabs button i{font-style:normal;font-size:15px}.cue-tabs button[data-cat='結構'].active{border-color:#38bdf8;color:#38bdf8}.cue-tabs button[data-cat='樂器'].active{border-color:#10b981;color:#10b981}.cue-tabs button[data-cat='動態'].active{border-color:#f59e0b;color:#f59e0b}.cue-tabs button[data-cat='結尾'].active{border-color:#fb7185;color:#fb7185}.cue-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.cue-grid .cue-button{position:relative;display:grid;grid-template-columns:28px 1fr;text-align:left;align-items:center;min-height:68px;padding:10px;border-left-width:3px;overflow:hidden}.cue-button i{font-style:normal;font-size:20px;text-align:center}.cue-button span{font-weight:900}.cue-button small{grid-column:2;color:#728197;font-size:8px;text-transform:uppercase;letter-spacing:.5px}.cue-button.cue-結構{border-left-color:#38bdf8;background:linear-gradient(115deg,#0d2130,#101827)}.cue-button.cue-樂器{border-left-color:#10b981;background:linear-gradient(115deg,#0d2926,#101827)}.cue-button.cue-動態{border-left-color:#f59e0b;background:linear-gradient(115deg,#2b2210,#101827)}.cue-button.cue-結尾{border-left-color:#fb7185;background:linear-gradient(115deg,#2d1520,#101827)}.cue-button:active{animation:cue-pop .25s}
+.now-playing{position:relative;touch-action:pan-y;will-change:transform;transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .2s}.now-playing.swiping{transition:none;box-shadow:0 18px 45px #0009}.now-playing:before{position:absolute;top:50%;padding:10px 14px;border-radius:9px;background:#f6c85f;color:#111827;font-size:11px;font-weight:900;opacity:0;pointer-events:none;white-space:nowrap}.now-playing.peek-next:before{content:'下一首  ' attr(data-next) '  →';right:calc(100% + 14px);opacity:1}.now-playing.peek-prev:before{content:'←  上一首  ' attr(data-prev);left:calc(100% + 14px);opacity:1}.now-playing:after{content:'← 左右滑動切換歌曲 →';display:block;margin-top:14px;text-align:center;color:#58677e;font-size:10px;font-weight:800;letter-spacing:.5px}
+@media(max-width:520px){.cue-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cue-grid .cue-button{min-height:64px}}
+/* Screenshot-matched mobile stage UI */
+body{background:#080d17;background-image:none;padding:calc(18px + env(safe-area-inset-top)) 14px calc(20px + env(safe-area-inset-bottom));font-family:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}.app-container{max-width:520px;gap:22px}.app-header{position:fixed;right:10px;top:calc(8px + env(safe-area-inset-top));z-index:30;width:auto;padding:0;background:transparent;border:0;box-shadow:none}.app-header .brand,.app-header .status-pill{display:none}.btn-icon{background:#04cde0;border:2px solid #15516a;width:48px;height:48px;color:#06101a}.mode-switch{height:76px;padding:4px;background:#101827;border:1px solid #344157;border-radius:24px;box-shadow:none;margin:0 0 0}.mode-btn{font-size:18px;border-radius:19px;color:#9da7ba}.mode-btn.active{background:#10d6e8;color:#07101b;box-shadow:0 4px 0 #07526a;font-weight:900}.mode-btn:nth-child(2).active{background:#ffa408;color:#14100a;box-shadow:0 4px 0 #7b4b06}
+.card-main,.card-secondary{background:#131d31;border:1px solid #344259;border-radius:25px;box-shadow:none;backdrop-filter:none}.practice-start{padding:0;border:0;background:transparent;overflow:visible}.practice-start .play-control-row{width:100%}.btn-play-sync{width:100%;height:86px;border-radius:23px;background:#13b9d0!important;color:#07101a!important;font-size:18px;box-shadow:none}.practice-stage{align-items:stretch;padding:20px 18px 26px;gap:8px}.stage-label{color:#a1abc0;letter-spacing:1px}.accent-layout{display:grid;grid-template-columns:72px 1fr;gap:20px;align-items:center}.beat-dots-container{display:flex;flex-direction:column;gap:8px;align-items:stretch}.beat-dot{width:70px!important;height:50px!important;border-radius:17px!important;border:2px solid #10d6e8!important;background:#14233a!important;box-shadow:none!important;color:white}.beat-dot:before{content:attr(data-beat);display:block;color:white}.beat-dot:after{top:50%;left:46px;color:#eaf2ff;font-size:18px}.beat-dot.accent-accent{border-color:#ffa408!important;background:#2a2217!important}.beat-dot.accent-accent:after{content:'★'}.beat-dot.accent-normal:after{content:'●';color:#10d6e8}.beat-dot.accent-soft:after{content:'•';color:#8190a7}.beat-dot.accent-muted:after{content:'×';color:#64748b}.radial-stage{position:relative;width:230px;height:230px;border:3px solid #354158;border-radius:50%;margin:auto}.radial-stage:before{content:'';position:absolute;inset:63px;border:3px solid #354158;border-radius:50%}.radial-stage i{position:absolute;width:22px;height:22px;background:#5559cb;border-radius:50%}.radial-stage i:nth-child(1){top:-11px;left:calc(50% - 11px);background:#16aec6}.radial-stage i:nth-child(2){right:-11px;top:calc(50% - 11px)}.radial-stage i:nth-child(3){bottom:-11px;left:calc(50% - 11px)}.radial-stage i:nth-child(4){left:-11px;top:calc(50% - 11px)}
+.tempo-card{padding:26px 24px}.tempo-heading{display:grid;grid-template-columns:1fr 70px 70px 70px;align-items:center;gap:8px}.tempo-heading>div{display:grid}.tempo-heading small,.time-title{color:#9aa6ba;letter-spacing:1px;font-size:15px}.tempo-heading strong{font-size:40px;white-space:nowrap;margin:8px 0}.tempo-heading em{font-style:normal;color:#18cfdf;font-size:23px}.tempo-heading button{height:66px;border:0;border-radius:28px;background:#111a2b;color:#12d3e4;font-weight:900;font-size:16px}.tempo-heading button:first-of-type,.tempo-heading button:last-of-type{color:#ffa408}.tempo-slider{margin:28px 0 26px;accent-color:#12d7e8}.time-title{margin-bottom:18px}.segmented-control{width:100%;display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.segment-btn{height:50px;border:1px solid #3a475e!important;border-radius:11px!important;background:#11192a!important;color:#b7c1d1!important}.segment-btn.active{border:0!important;background:#11192a!important;color:#ffb018!important}.tempo-card details{margin-top:24px;border-top:1px solid #263249;padding-top:20px}.tempo-card summary{font-size:18px}.advanced-settings{display:grid;gap:14px;margin-top:18px}.advanced-settings label{display:flex;justify-content:space-between;align-items:center}.advanced-settings select{background:#0c1422;color:white;border:1px solid #344158;padding:9px;border-radius:8px}.hidden-control{display:none}
+.song-sequence{display:grid;grid-template-columns:1fr auto;align-items:center;padding:22px}.song-sequence>div:first-child{display:grid;gap:6px}.song-sequence b{color:#ffb018}.song-sequence strong{font-size:20px}.song-sequence>button{border:1px solid #3d4960;background:transparent;color:#11cbdd;border-radius:28px;padding:14px 20px}.song-sequence .practice-song-fields,.song-sequence .section-strip,.song-sequence .practice-actions{grid-column:1/-1}.cue-shell{padding:18px}.setting-group b{color:#aeb8c9}.worship-tabs{height:65px;padding:4px;border-radius:20px}.worship-tabs button{font-size:17px}.worship-tabs button.active{background:#12d6e8;box-shadow:0 3px 0 #06576c}.worship-tabs button:nth-child(2).active{background:#ffa408;color:#111;box-shadow:0 3px 0 #7e4e04}
+.setlist-hero{background:#131d31;border:1px solid #6b4b1c;padding:22px;border-radius:26px}.setlist-info{border:1px solid #34445b;border-left:1px solid #34445b;background:#101a2b;padding:18px}.setlist-info b{display:block;color:#ffb018;margin-bottom:10px}.setlist-info strong{display:block}.setlist-manager{border-color:#6b4b1c;padding:22px}.setlist-toolbar{grid-template-columns:repeat(2,1fr);gap:12px}.setlist-toolbar button{height:58px;color:#12cedf;font-weight:800}.setlist-toolbar button:nth-last-child(1),.setlist-toolbar button:nth-child(5){background:#ffa408;color:#111;border:0}.drag-help{padding:14px;background:#28261f;color:#9ca7b8;border-radius:10px;margin:16px 0}.song-row{border-radius:18px;background:#1b2940;padding:16px;border:1px solid #34445c}.song-row.active{border:2px solid #15d5e6}.song-actions button{font-size:0;width:34px;height:34px;padding:0}.song-actions button[data-act=edit]:after{content:'✎';font-size:19px;color:#ffad16}.song-actions button[data-act=copy]:after{content:'▣';font-size:18px}.song-actions button[data-act=hide]:after{content:'●';font-size:18px;color:#10d5e6}.song-actions button[data-act=library]:after{content:'＋';font-size:18px}.song-actions button[data-act=delete]:after{content:'×';font-size:20px}.song-actions button[data-act=up]:after{content:'↑';font-size:18px}.song-actions button[data-act=down]:after{content:'↓';font-size:18px}
+.live-song-shell{border:2px solid #a66a0c;border-radius:28px;padding:16px;background:linear-gradient(135deg,#2d210d,#17170f);overflow:hidden}.now-playing{padding:0 0 12px;min-height:120px;border:0;background:transparent}.song-badges{display:flex;gap:8px}.song-badges>*{padding:8px 10px;border-radius:7px;background:#344157;color:white}.song-badges b{background:#ffa408;color:#17100a}.song-badges span:nth-child(2){color:#13dae9}.now-playing h2{font-size:30px;margin:18px 0}.now-playing p{color:#7d899d}.song-transport{display:none}.live-sections{padding:0;background:transparent;border:0}.live-section-head{display:grid;grid-template-columns:1fr .85fr;gap:10px}.live-section-head>div{display:grid;gap:9px;border:2px solid #12cfe1;border-radius:15px;padding:14px;background:#162b36}.live-section-head>div:nth-child(2){border:1px solid #344158;background:#11192b}.live-section-head small{color:#12cfe1;font-weight:900}.live-section-head b{font-size:22px}.live-sections .section-strip{margin:10px 0}.live-sections #advance-section{width:100%;border:2px solid #12d5e6;background:#115056;color:#13e4f2;border-radius:13px;padding:15px;font-weight:900}.live-cue-panel{margin-top:14px}.now-playing:after{content:'Swipe to switch songs';text-align:left}.cue-grid .cue-button{border-radius:14px}
+@media(max-width:520px){.tempo-heading{grid-template-columns:1fr 58px 58px 58px}.tempo-heading strong{font-size:34px}.radial-stage{width:205px;height:205px}.accent-layout{grid-template-columns:70px 1fr}.app-header{right:-4px}.song-actions{flex-wrap:wrap}}
+.cue-button.cat-0{border-left-color:#38bdf8;background:linear-gradient(115deg,#0d2130,#101827)}.cue-button.cat-1{border-left-color:#10b981;background:linear-gradient(115deg,#0d2926,#101827)}.cue-button.cat-2{border-left-color:#f59e0b;background:linear-gradient(115deg,#2b2210,#101827)}.cue-button.cat-3{border-left-color:#fb7185;background:linear-gradient(115deg,#2d1520,#101827)}
+/* Persistent connection bar, cue notification and two-card swipe transition */
+body{padding-top:calc(82px + env(safe-area-inset-top))}.app-header{position:fixed;top:env(safe-area-inset-top);left:0;right:0;width:100%;height:66px;border-radius:0;padding:9px 16px;background:#0d1524eF;border:0;border-bottom:1px solid #26364d;backdrop-filter:blur(18px);display:flex;z-index:50}.app-header .brand{display:flex;color:#dce6f4;font-size:12px;letter-spacing:1px}.app-header .top-room{display:block!important;position:static;background:#152237;border:1px solid #34445d;color:#10d6e8;padding:8px 12px;border-radius:11px;font-weight:900;margin-left:auto}.app-header .header-actions{display:flex}.app-header .status-pill{display:flex;background:transparent;border:0;padding:6px;color:#aeb9ca}.app-header .btn-icon{position:static;width:42px;height:42px}.advanced-settings #room-badge{display:none}
+.live-cue{position:fixed;z-index:200;top:calc(74px + env(safe-area-inset-top));left:50%;width:min(calc(100vw - 28px),500px);display:grid;grid-template-columns:48px 1fr 28px;align-items:center;gap:12px;padding:13px;background:linear-gradient(105deg,#183746,#1c2b42);border:2px solid #11d7e8;border-radius:17px;color:white;box-shadow:0 14px 35px #000b,0 0 22px #00d9eb26;opacity:0;transform:translate(-50%,-140%) scale(.96);transition:transform .32s cubic-bezier(.2,.9,.2,1),opacity .25s}.live-cue.show{opacity:1;transform:translate(-50%,0) scale(1)}.cue-megaphone{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:#12dbe9;color:#07121c;font-size:23px}.cue-copy{display:grid;min-width:0}.cue-copy small{color:#11d9e7;font-size:9px;font-weight:900;letter-spacing:.8px}.cue-copy small i{color:#a7b5c8;font-style:normal;font-weight:500}.cue-copy strong{font-size:24px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cue-copy span{color:#21d7e7;font-size:12px;margin-top:3px}.live-cue>button{border:0;background:transparent;color:#9aa8bb;font-size:26px}
+.live-song-shell{position:relative}.now-playing,.incoming-song-card{transition:transform .28s cubic-bezier(.2,.8,.2,1);will-change:transform}.now-playing.swiping,.now-playing.swiping~.incoming-song-card{transition:none}.incoming-song-card{position:absolute;z-index:4;left:16px;right:16px;top:16px;min-height:150px;padding:18px;border:2px solid #12d5e6;border-radius:18px;background:linear-gradient(135deg,#143345,#18263c);box-shadow:0 12px 32px #0009}.incoming-song-card small{color:#11d7e8;font-weight:900;letter-spacing:1px}.incoming-song-card h2{font-size:28px;margin:20px 0 8px}.incoming-song-card p{color:#9eabbf}.now-playing:before{display:none!important}
+@media(max-width:520px){body{padding-top:calc(74px + env(safe-area-inset-top))}.app-header{height:60px;padding:7px 10px}.app-header .brand{display:none}.app-header .top-room{margin-left:0}.app-header .status-pill{font-size:10px;padding:5px}.live-cue{top:calc(66px + env(safe-area-inset-top))}}
+/* Visible accent numbers, custom signature and per-cue color coding */
+.accent-layout .beat-dots-container{max-height:230px;overflow-y:auto;padding:2px}.accent-layout .beat-dot{display:grid!important;grid-template-columns:24px 1fr;place-items:center;padding:0 10px!important;color:#f4f7fb!important}.accent-layout .beat-dot:before,.accent-layout .beat-dot:after{display:none!important}.accent-layout .beat-dot .accent-glyph{display:grid;place-items:center;font-size:17px;color:#10d6e8}.accent-layout .beat-dot>b{display:block!important;font-size:20px;line-height:1;color:#fff}.accent-layout .beat-dot.accent-accent .accent-glyph{color:#ffab0b}.accent-layout .beat-dot.accent-soft .accent-glyph{color:#8290a5}.accent-layout .beat-dot.accent-muted .accent-glyph{color:#64748b}.accent-layout .beat-dot.active>b{color:#07111a}
+.tempo-card .segmented-control{grid-template-columns:repeat(5,minmax(0,1fr))}.tempo-card #custom-signature{height:50px;border:2px solid #10cfe0;background:#112033;color:#13d7e8;border-radius:11px;font-weight:900;font-size:12px}.tempo-card #custom-signature:active{background:#10cfe0;color:#07111a}
+.cue-grid .cue-button:nth-child(6n+1){border-left-color:#38bdf8;background:linear-gradient(120deg,#102c40,#101827)}.cue-grid .cue-button:nth-child(6n+2){border-left-color:#10b981;background:linear-gradient(120deg,#0e302b,#101827)}.cue-grid .cue-button:nth-child(6n+3){border-left-color:#f59e0b;background:linear-gradient(120deg,#352811,#101827)}.cue-grid .cue-button:nth-child(6n+4){border-left-color:#a855f7;background:linear-gradient(120deg,#2b1741,#101827)}.cue-grid .cue-button:nth-child(6n+5){border-left-color:#fb7185;background:linear-gradient(120deg,#3a1822,#101827)}.cue-grid .cue-button:nth-child(6n+6){border-left-color:#6366f1;background:linear-gradient(120deg,#1d2047,#101827)}.cue-grid .cue-button:nth-child(6n+1) i{color:#38bdf8}.cue-grid .cue-button:nth-child(6n+2) i{color:#10b981}.cue-grid .cue-button:nth-child(6n+3) i{color:#f59e0b}.cue-grid .cue-button:nth-child(6n+4) i{color:#a855f7}.cue-grid .cue-button:nth-child(6n+5) i{color:#fb7185}.cue-grid .cue-button:nth-child(6n+6) i{color:#818cf8}
+@media(max-width:430px){.tempo-card .segmented-control{grid-template-columns:repeat(4,1fr)}.tempo-card #custom-signature{grid-column:span 2}.accent-layout .beat-dot{width:64px!important}}
+/* Compact mobile density, dynamic metronome pulse and cue-matched alerts */
+@keyframes stage-pulse{0%{transform:scale(.96);box-shadow:0 0 0 0 var(--pulse-color)}35%{transform:scale(1.035);box-shadow:0 0 0 14px transparent,0 0 34px var(--pulse-color)}100%{transform:scale(1);box-shadow:0 0 0 0 transparent}}@keyframes stage-core{0%{transform:translate(-50%,-50%) scale(.55);opacity:.9}100%{transform:translate(-50%,-50%) scale(2.4);opacity:0}}
+.radial-stage{--pulse-color:#6366f177}.radial-stage.pulse{animation:stage-pulse .42s cubic-bezier(.2,.8,.2,1)}.radial-stage.pulse-accent{--pulse-color:#10d6e8aa}.radial-stage.pulse-soft{--pulse-color:#64748b66}.radial-stage.pulse-muted{animation:none}.radial-stage.pulse:after{content:'';position:absolute;z-index:-1;left:50%;top:50%;width:64px;height:64px;border-radius:50%;background:var(--pulse-color);animation:stage-core .42s ease-out}
+.live-cue.tone-0{border-color:#38bdf8;background:linear-gradient(105deg,#12384c,#1a2940)}.live-cue.tone-0 .cue-megaphone{background:#38bdf8}.live-cue.tone-0 .cue-copy small,.live-cue.tone-0 .cue-copy span{color:#38bdf8}.live-cue.tone-1{border-color:#10b981;background:linear-gradient(105deg,#103b32,#192d3a)}.live-cue.tone-1 .cue-megaphone{background:#10b981}.live-cue.tone-1 .cue-copy small,.live-cue.tone-1 .cue-copy span{color:#10b981}.live-cue.tone-2{border-color:#f59e0b;background:linear-gradient(105deg,#493510,#292838)}.live-cue.tone-2 .cue-megaphone{background:#f59e0b}.live-cue.tone-2 .cue-copy small,.live-cue.tone-2 .cue-copy span{color:#f59e0b}.live-cue.tone-3{border-color:#a855f7;background:linear-gradient(105deg,#371d50,#27243d)}.live-cue.tone-3 .cue-megaphone{background:#a855f7}.live-cue.tone-3 .cue-copy small,.live-cue.tone-3 .cue-copy span{color:#c084fc}.live-cue.tone-4{border-color:#fb7185;background:linear-gradient(105deg,#481d29,#2b2638)}.live-cue.tone-4 .cue-megaphone{background:#fb7185}.live-cue.tone-4 .cue-copy small,.live-cue.tone-4 .cue-copy span{color:#fb7185}.live-cue.tone-5{border-color:#818cf8;background:linear-gradient(105deg,#242851,#22283d)}.live-cue.tone-5 .cue-megaphone{background:#818cf8}.live-cue.tone-5 .cue-copy small,.live-cue.tone-5 .cue-copy span{color:#a5b4fc}
+@media(max-width:520px){.app-container{gap:12px}.mode-switch{height:58px;border-radius:18px}.mode-btn{font-size:14px;border-radius:14px}.practice-start .btn-play-sync{height:64px;border-radius:18px;font-size:14px}.card-main,.card-secondary{border-radius:19px}.practice-stage{padding:14px 13px 18px}.accent-layout{grid-template-columns:58px 1fr;gap:10px}.accent-layout .beat-dot{width:54px!important;height:40px!important;border-radius:12px!important;grid-template-columns:18px 1fr;padding:0 6px!important}.accent-layout .beat-dot>b{font-size:16px}.accent-layout .beat-dot .accent-glyph{font-size:13px}.radial-stage{width:158px;height:158px}.radial-stage:before{inset:43px}.radial-stage i{width:16px;height:16px}.radial-stage i:nth-child(1){top:-8px;left:calc(50% - 8px)}.radial-stage i:nth-child(2){right:-8px;top:calc(50% - 8px)}.radial-stage i:nth-child(3){bottom:-8px;left:calc(50% - 8px)}.radial-stage i:nth-child(4){left:-8px;top:calc(50% - 8px)}.tempo-card{padding:18px 16px}.tempo-heading{grid-template-columns:1fr 46px 50px 46px;gap:5px}.tempo-heading strong{font-size:28px;margin:4px 0}.tempo-heading em{font-size:17px}.tempo-heading button{height:48px;border-radius:18px;font-size:13px}.tempo-slider{margin:20px 0}.time-title{font-size:12px;margin-bottom:10px}.segment-btn,.tempo-card #custom-signature{height:40px!important;font-size:11px!important}.tempo-card details{margin-top:16px;padding-top:14px}.tempo-card summary{font-size:15px}.song-sequence{padding:15px;grid-template-columns:1fr auto}.song-sequence strong{font-size:16px}.song-sequence>button{padding:10px 12px;font-size:11px}.worship-tabs{height:52px;border-radius:16px}.worship-tabs button{font-size:14px}.live-song-shell{padding:11px;border-radius:21px}.now-playing h2{font-size:23px;margin:12px 0}.song-badges>*{padding:6px 7px;font-size:10px}.live-section-head>div{padding:10px}.live-section-head b{font-size:17px}.section-chip{min-width:78px;padding:8px;font-size:11px}.setlist-manager{padding:14px}.setlist-toolbar{gap:7px}.setlist-toolbar button{height:44px;font-size:11px}.song-row{padding:11px}.cue-shell,.live-cue-panel{padding:13px}.cue-grid{gap:6px}.cue-grid .cue-button{min-height:52px;padding:7px;grid-template-columns:22px 1fr}.cue-button i{font-size:15px}.cue-button span{font-size:11px}.cue-copy strong{font-size:19px}.live-cue{grid-template-columns:40px 1fr 22px;padding:10px}.cue-megaphone{width:38px;height:38px;font-size:18px}}
+@media(max-width:370px){.radial-stage{width:140px;height:140px}.tempo-heading{grid-template-columns:1fr 40px 44px 40px}.tempo-heading strong{font-size:24px}.mode-btn{font-size:12px}.cue-grid{grid-template-columns:1fr 1fr}.live-section-head{grid-template-columns:1fr}}
+/* Live Control composition matched to the Android stage screen */
+.live-song-shell{border:2px solid #a86c0c;background:linear-gradient(145deg,#2b210f,#15160f);padding:16px;border-radius:28px}.live-song-shell .now-playing{padding:0 0 10px}.live-song-shell .live-sections{display:flex;flex-direction:column;gap:10px}.live-metro-row{display:grid;grid-template-columns:1fr 58px 112px 58px;gap:8px;align-items:center;margin-top:2px}.live-metro-row>div{display:grid;gap:5px;padding-left:16px}.live-metro-row>div b{font-size:19px;color:#8792a6}.live-metro-row>div small{font-size:10px;color:#7b879a}.live-metro-row button{height:62px;border:0;border-radius:9px;background:#192439;color:#12cddd;font-weight:900}.live-metro-row>strong{display:flex;align-items:baseline;justify-content:center;color:#ffab0b;font-size:30px;white-space:nowrap}.live-metro-row>strong small{color:#68758a;font-size:11px;margin-left:3px}.bar-progress{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.bar-progress i{height:10px;background:#3c4961;border-radius:10px}.bar-progress i:first-child{background:#9b6509}.live-start{width:100%;height:70px;border:0;border-radius:15px;background:#ffa408;color:#14100a;font-size:18px;font-weight:1000;letter-spacing:.3px}.live-next-card{display:grid;grid-template-columns:1fr auto;gap:12px;padding:17px;border:2px solid #12d2e2;border-radius:27px;background:#101b2e}.live-next-card>div small{color:#12d4e4;font-size:12px;font-weight:900;letter-spacing:1px}.live-next-card h2{font-size:24px;margin:10px 0}.live-next-card>button{border:0;border-radius:10px;background:#12354c;color:#18d8e8;padding:0 14px;font-weight:900}.live-next-card .next-meta{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.next-meta span{padding:12px;text-align:center;background:#17243a;border-radius:10px;color:#aeb9c9;font-size:12px}.live-next-card #switch-next{grid-column:1/-1;height:60px;background:#10d7e8;color:#08111b;font-size:17px}.live-next-card>p{grid-column:1/-1;text-align:center;color:#67758a;font-size:11px}.live-cue-panel{border-radius:20px}.live-cue-panel>.setting-group{margin-bottom:8px}.live-cue-panel .cue-grid{padding-top:3px}
+@media(max-width:520px){.live-song-shell{padding:11px;border-radius:22px}.live-metro-row{grid-template-columns:1fr 46px 86px 46px;gap:5px}.live-metro-row>div{padding-left:8px}.live-metro-row>div b{font-size:16px}.live-metro-row button{height:52px;font-size:11px}.live-metro-row>strong{font-size:24px}.live-start{height:56px;font-size:14px}.bar-progress i{height:7px}.live-next-card{padding:13px;border-radius:21px}.live-next-card h2{font-size:20px}.live-next-card #switch-next{height:50px;font-size:14px}.next-meta span{padding:9px;font-size:10px}}
+/* Global control audit: connection UI, touch targets and live beat indicator */
+html,body{max-width:100%;overflow-x:hidden}button{font-family:inherit}.connection-button{display:grid!important;place-items:center!important;flex:0 0 42px}.qr-icon{display:grid;grid-template-columns:repeat(2,7px);grid-template-rows:repeat(2,7px);gap:4px}.qr-icon i{display:block;border:2px solid #07111b;width:7px;height:7px}.qr-icon i:last-child{border:0;background:#07111b;box-shadow:4px -4px 0 -1px #07111b}.app-header .top-room{max-width:125px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.app-header .status-pill{min-width:0}.app-header #status-text{max-width:125px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.bar-progress{grid-template-columns:repeat(auto-fit,minmax(18px,1fr))}.bar-progress i,.bar-progress i:first-child{background:#3c4961;transition:background .08s,box-shadow .08s,transform .08s}.bar-progress i.active{background:#f59e0b;box-shadow:0 0 13px #f59e0b88;transform:scaleY(1.25)}.bar-progress i.active.accent-beat{background:#ffad0b;box-shadow:0 0 17px #ffad0baa}.modal-backdrop{z-index:300;padding:calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));overflow-y:auto}.modal-dialog{width:min(100%,460px);max-height:calc(100dvh - 28px);overflow-y:auto;background:#101827;border:1px solid #35435a;border-radius:22px;padding:20px}.modal-dialog h2{color:#f3f6fb;margin-bottom:8px}.modal-dialog p{color:#9ca9bb;line-height:1.45}.modal-dialog button{min-height:44px;border:1px solid #35445c;border-radius:11px;background:#17243a;color:#dce6f4;padding:10px 13px;font-weight:800}.modal-dialog #btn-create-room,.modal-dialog #btn-apply-code,.modal-dialog #btn-scan-response{background:#11d2e3;color:#07111a;border:0}.modal-dialog #pairing-actions{display:grid;gap:9px}.modal-dialog textarea{width:100%;min-height:92px;margin:10px 0;background:#09111d;color:white;border:1px solid #35445c;border-radius:10px;padding:10px;user-select:text;-webkit-user-select:text}.qr-frame{margin:12px auto}.scanner-box{width:100%}.scanner-box video{width:100%;border-radius:13px}.mode-switch,.worship-tabs,.setlist-toolbar,.song-actions,.cue-tabs,.cue-grid{min-width:0}.song-row,.now-playing,.live-next-card,.setlist-info{min-width:0}.song-row strong,.song-row small,.now-playing h2,.live-next-card h2{overflow-wrap:anywhere}
+@media(max-width:390px){.app-header #status-text{max-width:82px}.app-header .top-room{max-width:95px;font-size:10px;padding:7px 8px}.connection-button{flex-basis:38px;width:38px!important;height:38px!important}.mode-switch{grid-template-columns:.9fr 1.1fr}.mode-btn{padding-left:5px;padding-right:5px}.modal-dialog{padding:15px;border-radius:17px}}
+/* Functional live controls, centered editors and YouTube title search */
+#live-start{display:flex!important;align-items:center;justify-content:center;width:100%;min-height:58px;border:0;border-radius:15px;background:#ffa408;color:#14100a;font-size:16px;font-weight:1000;letter-spacing:.2px;box-shadow:0 5px 0 #754805;cursor:pointer}#live-start:active{transform:translateY(3px);box-shadow:0 2px 0 #754805}#live-start:focus-visible{outline:3px solid #fff;outline-offset:2px}.app-dialog[open]{position:fixed!important;display:block;inset:50% auto auto 50%!important;transform:translate(-50%,-50%)!important;margin:0!important;width:min(calc(100vw - 28px),620px)!important;max-width:620px;max-height:min(88dvh,780px);overflow:hidden;z-index:500}.app-dialog form{max-height:min(84dvh,740px);overflow-y:auto;overscroll-behavior:contain;padding:18px}.app-dialog header{position:sticky;top:-18px;z-index:2;background:#111827;padding:8px 0 12px}.app-dialog menu{position:sticky;bottom:-18px;background:#111827;padding:12px 0 4px}.youtube-search{grid-column:1/-1;width:100%;min-height:44px;margin-top:8px;border:1px solid #ef4444!important;background:#32171d!important;color:#ff7b87!important;border-radius:10px;font-weight:900}.youtube-search:before{content:''}.cue-button{touch-action:manipulation;-webkit-touch-callout:none}.cue-button:active{filter:brightness(1.15)}
+@media(max-width:520px){#live-start{min-height:52px;font-size:13px}.app-dialog[open]{width:calc(100vw - 20px)!important;max-height:calc(100dvh - 24px)}.app-dialog form{padding:14px;max-height:calc(100dvh - 32px)}.app-dialog header{top:-14px}.app-dialog menu{bottom:-14px}.app-dialog .field-grid{grid-template-columns:1fr}}
+/* Drag-reorder song cards, YouTube action and screenshot-matched Setlist Info */
+.song-row{touch-action:pan-y;transition:transform .18s,opacity .18s,border-color .18s}.song-row .drag-handle{color:#6d7a90;font-size:22px;cursor:grab}.song-row.dragging{position:relative;z-index:20;pointer-events:none;opacity:.82;transform:scale(1.025);border-color:#f59e0b;box-shadow:0 18px 36px #000a}.song-actions .youtube-action{background:#3b171d!important;border:0!important;border-radius:50%!important}.song-actions .youtube-action:after{content:'▶';font-size:14px;color:#ff4d5e}.song-actions button[data-act=hide]:after{content:'◉';font-size:17px;color:#12d5e5}.song-actions button[data-act=copy]:after{content:'▣';font-size:17px;color:#94a3b8}.song-actions button[data-act=edit]:after{content:'✎';font-size:18px;color:#f59e0b}.song-actions button[data-act=delete]:after{content:'×';font-size:20px;color:#fb7185}
+.app-dialog:has(.setlist-editor){max-width:440px!important;background:#07313a;border-color:#16515b}.app-dialog:has(.setlist-editor) form,.app-dialog:has(.setlist-editor) header,.app-dialog:has(.setlist-editor) menu{background:#07313a}.setlist-editor{display:grid;gap:7px}.setlist-editor>label{margin:8px 0 0;color:#7d98a3;font-size:10px;letter-spacing:.4px}.setlist-editor>label small{float:right;color:#82949c;font-size:9px;font-weight:500;text-transform:none}.setlist-editor .icon-field{display:grid;grid-template-columns:35px 1fr;align-items:center;border:1px solid #21515b;border-radius:4px;background:#08343d}.setlist-editor .icon-field i{font-style:normal;text-align:center;color:#13d4e4;font-size:17px}.setlist-editor .icon-field:first-of-type i{color:#f59e0b}.setlist-editor .icon-field input{border:0!important;background:transparent!important;border-radius:0!important;min-height:50px}.setlist-editor textarea{background:#08343d!important;border:1px solid #21515b!important;border-radius:4px!important;resize:vertical;user-select:text;-webkit-user-select:text}.role-chips{display:flex;flex-wrap:wrap;gap:6px}.role-chips button{min-height:32px!important;padding:5px 10px!important;border:1px solid #2b5360!important;background:#163846!important;color:#8298a3!important;border-radius:6px!important;font-size:10px}.role-chips button:active{background:#12cfe0!important;color:#07151b!important}.setlist-editor~menu{display:grid;grid-template-columns:auto 1fr;gap:8px}.setlist-editor~menu .primary{background:#ffa408!important;color:#171007!important;min-height:50px;font-weight:1000}.setlist-editor~menu .primary:before{content:'⌁  ';font-size:18px}
+@media(max-width:520px){.song-actions{gap:3px}.song-actions button{width:31px;height:31px}.app-dialog:has(.setlist-editor){width:calc(100vw - 18px)!important}.setlist-editor .icon-field input{min-height:46px}.setlist-editor~menu .primary{min-height:46px}}
+/* Accent columns, saved cue subtitles/colors, and dedicated iPad/desktop layout */
+.accent-layout{grid-template-columns:auto minmax(140px,1fr)}.accent-layout .beat-dots-container{display:grid!important;grid-template-rows:repeat(4,50px);grid-auto-flow:column;grid-auto-columns:70px;gap:8px;max-height:none;max-width:230px;overflow-x:auto;overflow-y:hidden;align-content:start}.cue-grid .cue-button.tone-0{border-left-color:#38bdf8;background:linear-gradient(120deg,#102c40,#101827)}.cue-grid .cue-button.tone-1{border-left-color:#10b981;background:linear-gradient(120deg,#0e302b,#101827)}.cue-grid .cue-button.tone-2{border-left-color:#f59e0b;background:linear-gradient(120deg,#352811,#101827)}.cue-grid .cue-button.tone-3{border-left-color:#a855f7;background:linear-gradient(120deg,#2b1741,#101827)}.cue-grid .cue-button.tone-4{border-left-color:#fb7185;background:linear-gradient(120deg,#3a1822,#101827)}.cue-grid .cue-button.tone-5{border-left-color:#818cf8;background:linear-gradient(120deg,#1d2047,#101827)}.cue-button small{white-space:normal;line-height:1.25;text-transform:none!important;letter-spacing:0!important}
+@media(max-width:767px){.accent-layout .beat-dots-container{grid-template-rows:repeat(4,40px);grid-auto-columns:54px;max-width:116px}}
+@media(min-width:768px){body{align-items:center;padding-left:22px;padding-right:22px}.app-container{max-width:1120px;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;align-items:start}.mode-switch{grid-column:1/-1;grid-row:1}.practice-start{grid-column:1/6;grid-row:2}.practice-stage{grid-column:1/6;grid-row:3/5;min-height:330px}.tempo-card{grid-column:6/-1;grid-row:2/4}.song-sequence{grid-column:6/-1;grid-row:4}.cue-shell{grid-column:1/-1;grid-row:5}.worship-panel{grid-column:1/-1;grid-row:2;display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;align-items:start}.worship-panel>.worship-tabs{grid-column:1/-1}.worship-panel>.setlist-hero{grid-column:1/-1}.worship-panel>.live-song-shell{grid-column:1/9;grid-row:2/5}.worship-panel>.live-next-card{grid-column:9/-1;grid-row:2}.worship-panel>.live-cue-panel{grid-column:9/-1;grid-row:3/5;margin-top:0}.worship-panel>.setlist-manager{grid-column:1/-1;grid-row:3}.worship-panel .cue-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.worship-panel .cue-grid .cue-button{min-height:56px}.setlist-manager .song-list{grid-template-columns:repeat(2,minmax(0,1fr))}.setlist-manager .setlist-toolbar{grid-template-columns:repeat(4,1fr)}.practice-stage .radial-stage{width:190px;height:190px}.practice-stage .accent-layout{gap:14px}.tempo-heading{grid-template-columns:1fr 62px 70px 62px}.song-sequence .practice-song-fields{grid-template-columns:1fr 80px 90px}.app-dialog:not(:has(.setlist-editor)){max-width:720px!important}.app-dialog:not(:has(.setlist-editor)) .field-grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1024px){.worship-panel>.live-song-shell{grid-column:1/9}.worship-panel>.live-next-card,.worship-panel>.live-cue-panel{grid-column:9/-1}.practice-stage .radial-stage{width:220px;height:220px}.cue-shell .cue-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+/* Top-bar audio activation and single-viewport tablet/desktop dashboard */
+.app-header .top-audio{position:static;inset:auto;max-width:none;width:auto;margin:0 6px;padding:8px 11px;border-radius:10px;box-shadow:none;background:#10d2e3;color:#07121a;font-size:11px;white-space:nowrap;z-index:auto}.app-header .top-audio.show{display:flex}.app-header .top-audio:not(.show){display:none}
+@media(min-width:768px) and (min-height:650px){body{height:100dvh;overflow:hidden;padding-top:calc(76px + env(safe-area-inset-top));padding-bottom:12px}.app-container{height:calc(100dvh - 88px - env(safe-area-inset-top));grid-template-rows:58px 92px minmax(0,1fr);overflow:hidden}.mode-switch{grid-row:1;height:58px}.practice-start{grid-column:1/5;grid-row:2;height:92px}.practice-start .btn-play-sync{height:72px}.practice-stage{grid-column:1/5;grid-row:3;min-height:0;height:100%;overflow:hidden}.practice-stage .accent-layout{height:calc(100% - 24px)}.practice-stage .radial-stage{width:min(19vw,200px);height:min(19vw,200px)}.tempo-card{grid-column:5/9;grid-row:2/4;min-height:0;height:100%;overflow:hidden;padding:18px}.tempo-card .tempo-heading strong{font-size:30px}.tempo-card .tempo-slider{margin:18px 0}.tempo-card details{margin-top:14px}.tempo-card details[open]{max-height:210px;overflow-y:auto}.song-sequence{grid-column:9/-1;grid-row:2;height:92px;overflow:hidden;padding:13px}.song-sequence .practice-song-fields,.song-sequence .section-strip,.song-sequence .practice-actions{display:none}.cue-shell{grid-column:9/-1;grid-row:3;min-height:0;height:100%;overflow:hidden;display:flex;flex-direction:column}.cue-shell .cue-tabs{flex:0 0 auto}.cue-shell .cue-grid{min-height:0;overflow-y:auto;grid-template-columns:repeat(2,minmax(0,1fr))}.cue-shell .custom-cue{flex:0 0 auto}.worship-panel{grid-row:2/4;height:100%;min-height:0;overflow:hidden;grid-template-rows:54px auto minmax(0,1fr)}.worship-panel>.worship-tabs{height:54px}.worship-panel>.live-song-shell{grid-row:2/4;min-height:0;height:100%;overflow-y:auto}.worship-panel>.live-next-card{grid-row:2}.worship-panel>.live-cue-panel{grid-row:3;min-height:0;height:100%;overflow:hidden;display:flex;flex-direction:column}.live-cue-panel .cue-grid{min-height:0;overflow-y:auto}.worship-panel>.setlist-hero{grid-row:2}.worship-panel>.setlist-manager{grid-row:3;min-height:0;height:100%;overflow:hidden;display:flex;flex-direction:column}.setlist-manager .setlist-toolbar,.setlist-manager .drag-help{flex:0 0 auto}.setlist-manager .song-list{min-height:0;overflow-y:auto}.app-dialog[open]{max-height:calc(100dvh - 36px)}.app-dialog form{max-height:calc(100dvh - 48px)}}
+@media(min-width:900px){.app-header .top-audio{font-size:12px;padding:9px 13px}.app-header .top-room{max-width:170px}.app-header #status-text{max-width:180px}}
+@media(max-width:767px){.app-header .top-audio{font-size:0;width:38px;height:38px;padding:0;justify-content:center}.app-header .top-audio:before{content:'♪';font-size:17px}.app-header .top-room{max-width:88px}.app-header #status-text{max-width:72px}}
+/* Global language control and denser desktop canvas */
+.language-toggle{flex:0 0 auto;min-width:42px;height:42px;border:1px solid #34445c;border-radius:10px;background:#152238;color:#f6c85f;font-size:13px;font-weight:1000;cursor:pointer}.language-toggle:active{background:#f6c85f;color:#111827}.app-header{gap:7px}
+@media(min-width:1024px) and (min-height:650px){body{padding-top:calc(64px + env(safe-area-inset-top));padding-bottom:8px}.app-header{height:54px;padding:6px 18px}.app-header .btn-icon,.app-header .language-toggle{width:38px;height:38px;min-width:38px}.app-header .top-audio{padding:7px 10px}.app-container{max-width:1280px;height:auto;max-height:calc(100dvh - 72px - env(safe-area-inset-top));grid-template-rows:46px 68px minmax(0,470px);gap:10px}.mode-switch{height:46px;border-radius:14px}.mode-btn{font-size:14px;border-radius:11px}.practice-start{height:68px}.practice-start .btn-play-sync{height:56px;border-radius:15px;font-size:13px}.practice-stage{padding:12px;min-height:0}.practice-stage .radial-stage{width:150px;height:150px}.practice-stage .radial-stage:before{inset:41px}.practice-stage .accent-layout .beat-dots-container{grid-template-rows:repeat(4,36px);grid-auto-columns:50px;gap:5px;max-width:108px}.practice-stage .accent-layout .beat-dot{width:50px!important;height:36px!important}.tempo-card{padding:14px}.tempo-heading{grid-template-columns:1fr 44px 50px 44px}.tempo-heading strong{font-size:25px;margin:2px 0}.tempo-heading em{font-size:15px}.tempo-heading button{height:42px}.tempo-slider{margin:12px 0!important}.time-title{margin-bottom:8px}.segment-btn,.tempo-card #custom-signature{height:36px!important}.tempo-card details{margin-top:10px;padding-top:10px}.tempo-card summary{font-size:13px}.song-sequence{height:68px;padding:9px 12px}.song-sequence strong{font-size:14px}.song-sequence>button{padding:8px 10px}.cue-shell{padding:11px}.cue-tabs{margin:4px 0}.cue-tabs button{padding:6px}.cue-grid{gap:5px}.cue-grid .cue-button{min-height:46px!important;padding:6px}.cue-button span{font-size:10px}.cue-button small{font-size:7px}.custom-cue{margin-top:5px}.custom-cue input{padding:8px}.worship-panel{grid-template-rows:46px auto minmax(0,1fr);gap:10px}.worship-panel>.worship-tabs{height:46px}.worship-tabs button{font-size:13px}.live-song-shell{padding:10px}.now-playing{min-height:90px}.now-playing h2{font-size:21px;margin:8px 0}.song-badges>*{padding:5px 7px}.live-section-head>div{padding:8px}.live-section-head b{font-size:15px}.live-sections .section-strip{margin:5px 0}.section-chip{padding:7px;min-width:70px}.live-metro-row button{height:44px}.live-metro-row>strong{font-size:22px}.live-start,#live-start{min-height:46px;height:46px;font-size:12px}.live-next-card{padding:10px}.live-next-card h2{font-size:17px;margin:6px 0}.next-meta span{padding:7px}.live-next-card #switch-next{height:42px;font-size:12px}.live-next-card>p{margin:0}.live-cue-panel{padding:10px}.setlist-manager{padding:11px}.setlist-toolbar{gap:5px}.setlist-toolbar button{height:38px}.drag-help{margin:7px 0;padding:8px}.song-row{padding:8px}.setlist-manager .song-list{gap:5px}}
+
+/* Compact desktop forms and physical drag-reorder feedback */
+#load-template{display:none!important}
+.drag-ghost{position:fixed!important;z-index:650!important;pointer-events:none!important;margin:0!important;opacity:.97;transform:rotate(1deg) scale(1.025);border-color:#f59e0b!important;box-shadow:0 20px 45px #000c,0 0 0 2px #f59e0b55;transition:none!important;will-change:left,top}
+.drag-placeholder{opacity:.16!important;border:1px dashed #f59e0b!important;background:#172033!important;box-shadow:inset 0 0 18px #f59e0b18}
+body:has(.drag-ghost){cursor:grabbing!important;user-select:none}
+body.reorder-active{overflow:hidden!important;overscroll-behavior:none!important;touch-action:none!important}
+@keyframes worship-border-beat{0%{border-color:#fff4b8;box-shadow:0 0 0 2px #f59e0bcc,0 0 25px #f59e0baa}42%{border-color:#f59e0b;box-shadow:0 0 0 1px #f59e0b55,0 0 12px #f59e0b55}100%{border-color:#a86c0c;box-shadow:none}}
+.live-song-shell.beat-border{animation:worship-border-beat .32s ease-out}
+.live-song-shell.beat-border-normal{--live-beat:#f59e0b}.live-song-shell.beat-border-accent{animation-duration:.42s;filter:none}
+@media(max-width:767px){.setlist-manager .song-row{touch-action:none;-webkit-user-select:none;user-select:none}.setlist-manager .song-actions button{touch-action:manipulation}}
+@media(min-width:768px){
+  .setlist-manager .setlist-toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .app-dialog[open]{width:min(calc(100vw - 32px),520px)!important;max-width:520px!important;max-height:min(76dvh,650px)!important;border-radius:13px}
+  .app-dialog form{padding:12px 14px;max-height:min(74dvh,630px)!important}
+  .app-dialog header{top:-12px;padding:4px 0 7px}
+  .app-dialog header h2{font-size:17px;margin:3px 0}
+  .app-dialog header button{font-size:20px}
+  .app-dialog label{font-size:10px;margin:7px 0 3px}
+  .app-dialog input,.app-dialog select{min-height:34px;padding:6px 8px;font-size:12px;border-radius:7px}
+  .app-dialog textarea{min-height:56px;padding:7px 8px;font-size:12px;border-radius:7px}
+  .app-dialog .field-grid{gap:0 8px}
+  .app-dialog menu{bottom:-12px;padding:8px 0 2px}
+  .app-dialog menu button{min-height:34px;padding:6px 12px;font-size:11px;border-radius:7px}
+  .app-dialog:has(.setlist-editor){width:min(calc(100vw - 32px),390px)!important;max-width:390px!important}
+  .setlist-editor{gap:4px}
+  .setlist-editor>label{margin-top:5px}
+  .setlist-editor .icon-field{grid-template-columns:29px 1fr}
+  .setlist-editor .icon-field i{font-size:14px}
+  .setlist-editor .icon-field input{min-height:36px}
+  .setlist-editor textarea{min-height:54px}
+  .role-chips{gap:4px}
+  .role-chips button{min-height:27px!important;padding:3px 7px!important;font-size:9px}
+  .setlist-editor~menu .primary{min-height:36px}
+  .section-editor-list{gap:4px;margin-top:6px}
+  .section-edit-row{grid-template-columns:1fr 58px 30px;gap:4px}
+  .youtube-search{min-height:34px;margin-top:5px;font-size:11px}
+}
+
+/* Setlist information hierarchy and collapsible secondary actions */
+.song-sequence{display:none!important}
+.setlist-info{margin:0!important}
+.setlist-date{display:block;color:#f2f6fb;font-size:17px}
+.setlist-voices{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:7px;color:#d8e2ef;font-size:12px}
+.setlist-musicians{margin-top:12px;padding-top:10px;border-top:1px solid #34445b;color:#91a0b4;font-size:12px;line-height:1.45}
+.setlist-toolbar{display:block}
+.setlist-primary-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.setlist-primary-actions button{width:100%;background:#ffa408!important;color:#111!important;border:0!important;font-weight:900}
+.setlist-more{margin-top:8px;border:1px solid #334158;border-radius:10px;background:#101a2a;overflow:hidden}
+.setlist-more summary{list-style:none;cursor:pointer;padding:9px 12px;text-align:center;color:#91a0b5;font-size:11px;font-weight:800}
+.setlist-more summary::-webkit-details-marker{display:none}
+.setlist-more summary:after{content:'⌄';display:inline-block;margin-left:7px;transition:transform .2s}
+.setlist-more[open] summary:after{transform:rotate(180deg)}
+.setlist-more-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 8px 8px;animation:more-actions-in .2s ease-out}
+.setlist-more-actions button{height:36px!important;font-size:10px;background:#111b2a!important;color:#12cedf!important;border:1px solid #344158!important}
+@keyframes more-actions-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+@media(max-width:767px){
+  .app-container{gap:8px}
+  .mode-switch{height:48px!important;margin-bottom:8px;border-radius:14px}
+  .mode-btn{padding:7px;font-size:12px!important;border-radius:10px!important}
+  .worship-tabs{height:46px!important;margin-bottom:8px;border-radius:13px}
+  .worship-tabs button{padding:7px;font-size:12px!important}
+  .setlist-hero{padding:0!important;margin-bottom:8px!important;border-radius:16px!important}
+  .setlist-info{padding:12px!important;border-radius:15px!important}
+  .setlist-date{font-size:14px}
+  .setlist-voices,.setlist-musicians{font-size:10px}
+  .setlist-voices{margin-top:5px;gap:3px 10px}
+  .setlist-musicians{margin-top:8px;padding-top:7px}
+  .setlist-manager{padding:10px!important;border-radius:16px!important}
+  .setlist-primary-actions{gap:6px}
+  .setlist-primary-actions button{height:40px!important;font-size:11px!important;border-radius:9px}
+  .setlist-more{margin-top:6px}
+  .setlist-more summary{padding:7px 10px;font-size:10px}
+  .setlist-more-actions{grid-template-columns:repeat(2,1fr)}
+  .drag-help{margin:8px 0!important;padding:8px!important;font-size:9px}
+  .setlist-manager .song-list{gap:6px}
+  .setlist-manager .song-row{padding:8px!important;border-radius:12px!important}
+  .song-row strong{font-size:12px}.song-row small{font-size:9px}
+}
+
+/* Accessible gradients and desktop/iPad score workspace */
+.mode-btn.active,.worship-tabs button.active,.setlist-primary-actions button{background-image:linear-gradient(135deg,#fff7d6 0%,#ffd166 48%,#ffb703 100%)}
+.tempo-heading button,.segment-btn,.cue-button,.setlist-more-actions button{background-image:linear-gradient(145deg,#fffef9,#f7ecd2)!important}
+.mode-btn.active,.worship-tabs button:first-child.active{background-image:linear-gradient(135deg,#baf4ef 0%,#50d5dc 52%,#18b9d4 100%)!important}
+.worship-tabs{grid-template-columns:repeat(3,1fr)!important}
+.worship-tabs .score-tab.active{background-image:linear-gradient(135deg,#fff0b8,#ffbf3c 55%,#f59e0b)!important;color:#3b2800!important}
+input[type=range]{appearance:none;-webkit-appearance:none;height:8px;border-radius:999px;background:linear-gradient(90deg,#f59e0b 0%,#ffd166 38%,#47d3d8 72%,#168fa8 100%)!important;border:1px solid #c79d43;box-shadow:inset 0 1px 2px #7d5d2533;opacity:1}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:linear-gradient(145deg,#fffef8,#ffe39a)!important;border:3px solid #167f98!important;box-shadow:0 2px 8px #17354b55!important}
+input[type=range]::-moz-range-track{height:8px;border-radius:999px;background:linear-gradient(90deg,#f59e0b,#ffd166 38%,#47d3d8 72%,#168fa8);border:1px solid #c79d43}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#fff8dc;border:3px solid #167f98;box-shadow:0 2px 8px #17354b55}
+.score-panel{grid-column:1/-1;grid-row:2/5;min-height:0;height:100%;display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;background:linear-gradient(145deg,#fffaf0,#eaf8f4);border:1px solid #ddc488;border-radius:16px;padding:10px;overflow:hidden}
+.worship-view-hidden{display:none!important}
+.score-hud{display:grid;grid-template-columns:minmax(170px,.8fr) minmax(240px,1.3fr) auto;gap:9px;align-items:stretch}
+.score-hud>div,.score-cue,.score-upload{border:1px solid #d8c79e;border-radius:11px;background:linear-gradient(145deg,#fffdf8,#fff1c9);padding:9px 11px}
+.score-hud small{display:block;color:#7f6c43;font-size:9px;font-weight:900;letter-spacing:.8px;margin-bottom:6px}
+.score-hud .bar-progress{height:12px;align-items:center}.score-hud .bar-progress i{height:7px}.score-hud .bar-progress i.active{height:11px}
+.score-cue{display:grid;grid-template-columns:1fr;align-content:center;border-color:#48bccc;background:linear-gradient(135deg,#e9fbf8,#c8f1ee)}
+.score-cue strong{color:#21424a;font-size:15px}.score-cue span{color:#54777d;font-size:10px;margin-top:2px}
+.score-upload{display:flex;align-items:center;justify-content:center;min-width:125px;background:linear-gradient(135deg,#ffd76a,#ffb703);color:#3e2a00;font-size:11px;font-weight:900;cursor:pointer}
+.score-upload input{display:none}
+.score-viewer{min-height:0;height:100%;overflow:auto;border-radius:12px;background:#77705f;box-shadow:inset 0 0 20px #0003}
+.score-viewer iframe{display:block;width:100%;height:100%;min-height:480px;border:0;background:white}
+.score-viewer img{display:block;max-width:100%;height:auto;margin:0 auto;background:white;box-shadow:0 8px 30px #0005}
+.score-empty{height:100%;min-height:300px;display:grid;place-content:center;text-align:center;color:#fff5d7;gap:7px}.score-empty b{font-size:42px;color:#ffd166}.score-empty strong{font-size:16px}.score-empty small{color:#e8ddbf}
+@media(max-width:767px){.worship-tabs{grid-template-columns:repeat(2,1fr)!important}.score-tab,.score-panel,.song-actions button[data-act=score]{display:none!important}}
+
+.song-actions button[data-act=score]:after{content:'♬';font-size:18px;color:#168fa8}.song-actions button[data-act=score]{background:#e9f8f8!important;border-color:#7ccbd3!important}
+@media(min-width:768px) and (orientation:landscape){.score-panel{grid-row:2/4}.score-viewer iframe{min-height:0}}
+
+/* iPad portrait: spacious stacked worship workspace instead of squeezed desktop columns */
+@media(min-width:768px) and (max-width:1100px) and (orientation:portrait){
+  body{height:auto!important;min-height:100dvh;overflow-y:auto!important;padding-top:calc(68px + env(safe-area-inset-top))!important}
+  .app-container{height:auto!important;max-height:none!important;overflow:visible!important;grid-template-rows:auto!important;gap:9px!important}
+  .mode-switch{grid-column:1/-1;grid-row:auto!important;height:48px!important}
+  .practice-start{grid-column:1/-1!important;grid-row:auto!important;height:58px!important}
+  .practice-start .btn-play-sync{height:48px!important}
+  .practice-stage{grid-column:1/7!important;grid-row:auto!important;height:390px!important;min-height:0!important}
+  .tempo-card{grid-column:7/-1!important;grid-row:auto!important;height:390px!important;min-height:0!important;overflow-y:auto!important}
+  .cue-shell{grid-column:1/-1!important;grid-row:auto!important;height:auto!important;max-height:none!important}
+  .cue-shell .cue-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important;overflow:visible!important}
+  .worship-panel{grid-column:1/-1;grid-row:auto!important;height:auto!important;min-height:0;overflow:visible!important;grid-template-rows:auto!important;gap:9px!important}
+  .worship-panel>.worship-tabs{grid-column:1/-1;grid-row:auto!important;height:48px!important}
+  .worship-panel>.live-song-shell{grid-column:1/-1!important;grid-row:auto!important;height:auto!important;min-height:0!important;overflow:visible!important}
+  .worship-panel>.live-next-card{grid-column:1/7!important;grid-row:auto!important}
+  .worship-panel>.live-cue-panel{grid-column:7/-1!important;grid-row:auto!important;height:auto!important;min-height:0!important;overflow:visible!important}
+  .worship-panel>.setlist-hero,.worship-panel>.setlist-manager{grid-column:1/-1!important;grid-row:auto!important;height:auto!important;overflow:visible!important}
+  .setlist-manager .song-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .score-panel{grid-column:1/-1!important;grid-row:auto!important;height:calc(100dvh - 150px)!important;min-height:650px!important}
+  .score-hud{grid-template-columns:1fr 1.35fr auto}
+  .score-viewer iframe{min-height:600px}
+}
+
+.incoming-song-card{color:#263448!important;background:linear-gradient(145deg,#fffdf8,#fff0c8)!important;border-color:#e4aa22!important;box-shadow:0 14px 34px #70551d35!important}
+.incoming-song-card h2{color:#243044!important;font-size:28px!important;line-height:1.15;margin:18px 0 8px!important;text-shadow:none!important}
+.incoming-song-card p{color:#607087!important;font-weight:700}
+#score-upload-status{align-self:center;justify-self:center;color:#39717b;font-size:9px;font-weight:800;white-space:nowrap}
+.score-tools{grid-template-columns:1fr auto 1fr}
+.youtube-search{background-image:linear-gradient(135deg,#fff1ed,#ffd2c8)!important;color:#a53135!important;border-color:#e6857f!important}
+@media(min-width:768px) and (max-width:1366px){.app-dialog .field-grid{align-items:end}.app-dialog textarea[data-field=sections]{min-height:130px}.app-dialog textarea[data-field=notes]{min-height:72px}}
+
+/* Dynamic orbit metronome and compact one-line setlist rows */
+.radial-stage{--orbit-dot:20px;overflow:visible;transform-origin:50% 50%}
+.radial-stage>i{right:auto!important;bottom:auto!important;width:var(--orbit-dot)!important;height:var(--orbit-dot)!important;background:#7e89a4!important;border:3px solid #fffaf0;box-sizing:border-box;transition:background .12s,box-shadow .12s,transform .12s;z-index:3}
+.radial-stage>i.active{background:#ffb703!important;box-shadow:0 0 0 4px #ffb70335,0 0 18px #f59e0b;transform:scale(1.25)}
+.orbit-runner{position:absolute;inset:0;border-radius:50%;pointer-events:none;z-index:4;transform-origin:50% 50%}
+.orbit-runner:before{content:'';position:absolute;left:50%;top:-4px;width:8px;height:8px;margin-left:-4px;border-radius:50%;background:#18b9d4;box-shadow:0 0 5px 3px #18b9d488,0 8px 12px #18b9d466}
+.orbit-runner:after{content:'';position:absolute;left:calc(50% - 1px);top:2px;width:2px;height:24%;background:linear-gradient(#18b9d488,transparent);transform-origin:top;opacity:.55}
+@keyframes centered-stage-core{0%{transform:scale(.55);opacity:.9}100%{transform:scale(2.4);opacity:0}}
+.radial-stage.pulse:after{left:50%!important;top:50%!important;margin-left:-32px!important;margin-top:-32px!important;transform:none!important;animation:centered-stage-core .42s ease-out!important}
+.setlist-manager .song-row{grid-template-columns:42px 32px minmax(110px,1fr) auto!important;padding:8px 9px!important;gap:7px!important}
+.setlist-manager .song-actions{grid-column:auto!important;grid-row:1!important;align-self:center;flex-wrap:nowrap!important;gap:3px!important}
+.setlist-manager .song-actions button{width:30px!important;height:30px!important}
+.setlist-manager .row-main strong{font-size:12px!important}.setlist-manager .row-main small{font-size:9px!important;white-space:nowrap}
+@media(max-width:767px){.radial-stage{--orbit-dot:16px}.setlist-manager .song-row{grid-template-columns:38px 28px minmax(90px,1fr) auto!important}.setlist-manager .song-actions button{width:28px!important;height:28px!important}}
+
+/* Score reader: song + beat + fullscreen, horizontally paged sheets */
+.score-panel{position:relative}
+.score-hud{grid-template-columns:minmax(150px,1fr) minmax(210px,1.2fr) 42px!important;align-items:center!important}
+.score-hud h2{margin:0;padding:0 8px;color:#243044;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.score-live-beat{padding:7px 10px!important}.score-live-beat small{margin-bottom:4px!important}.score-live-beat .bar-progress{height:10px}
+#score-fullscreen{width:40px;height:40px;min-width:40px;padding:0!important;border:1px solid #2797aa;border-radius:10px;background:linear-gradient(135deg,#d8f7f2,#4ccbd4);color:#153b43;font-size:21px;font-weight:900;cursor:pointer}
+.score-viewer{display:flex!important;align-items:stretch;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory!important;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
+.score-viewer>iframe,.score-viewer>img,.score-viewer>.score-empty{flex:0 0 100%!important;width:100%!important;height:100%!important;min-height:0!important;margin:0!important;scroll-snap-align:start;scroll-snap-stop:always;box-sizing:border-box}
+.score-viewer>img{object-fit:contain;background:#fff}
+.score-floating-cue{position:absolute;z-index:40;left:50%;top:62px;width:min(520px,calc(100% - 30px));display:grid;gap:2px;padding:11px 15px;border:2px solid #18b9d4;border-radius:13px;background:linear-gradient(135deg,#e8fbf8,#bceeea);box-shadow:0 12px 30px #17354b44;opacity:0;pointer-events:none;transform:translate(-50%,-125%) scale(.96);transition:transform .28s cubic-bezier(.2,.9,.2,1),opacity .2s}
+.score-floating-cue.show{opacity:1;transform:translate(-50%,0) scale(1)}
+.score-floating-cue small{color:#287482;font-size:8px;font-weight:900;letter-spacing:.8px}.score-floating-cue strong{color:#203943;font-size:20px}.score-floating-cue span{color:#52747b;font-size:10px}
+.score-panel:fullscreen .score-hud,.score-panel.score-fullscreen-fallback .score-hud{grid-template-columns:minmax(180px,1fr) minmax(260px,1fr) 44px!important}
+@media(min-width:768px) and (max-width:1100px) and (orientation:portrait){.score-hud{grid-template-columns:minmax(140px,1fr) minmax(190px,1fr) 40px!important}.score-panel{height:calc(100dvh - 145px)!important}}
+
+/* Continuous setlist score reader and true one-line song cards */
+.score-viewer{display:block!important;overflow-x:hidden!important;overflow-y:auto!important;scroll-snap-type:y proximity!important}
+.score-song-sheet{scroll-snap-align:start;background:#fff;border-bottom:10px solid #77705f;min-height:100%}
+.score-song-sheet>header{position:sticky;top:0;z-index:3;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 13px;background:#fff7dfeb;border-bottom:1px solid #dfc98f;backdrop-filter:blur(8px)}
+.score-song-sheet>header b{color:#253247;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.score-song-sheet>header small{color:#68758a;font-size:9px;white-space:nowrap}
+.score-pages{display:grid;gap:8px;min-height:calc(100% - 42px);background:#77705f}.score-pages iframe,.score-pages img{display:block;width:100%;min-height:650px;border:0;margin:0 auto;background:white;object-fit:contain}.score-pages img{height:auto;min-height:0}.score-pages p{align-self:center;justify-self:center;color:#fff4cf;font-weight:800}
+.score-view-warning{position:absolute;z-index:35;left:50%;top:62px;max-width:calc(100% - 28px);padding:7px 12px;border:1px solid #e9a51b;border-radius:9px;background:#fff0bc;color:#664500;font-size:10px;font-weight:900;opacity:0;pointer-events:none;transform:translate(-50%,-12px);transition:.2s}.score-view-warning.show{opacity:1;transform:translate(-50%,0)}
+.score-floating-cue{top:98px}
+.setlist-manager .song-row{grid-template-columns:38px minmax(0,1fr) auto!important;min-height:48px!important}
+.setlist-manager .song-actions{grid-column:3!important}
+.setlist-manager .row-main{min-width:0}.setlist-manager .row-main strong,.setlist-manager .row-main small{display:block;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;overflow-wrap:normal!important}
+.setlist-manager .row-main strong{font-size:13px!important}.setlist-manager .row-main small{margin-top:2px!important}
+.app-header .top-room{max-width:none!important;width:auto!important;overflow:visible!important;text-overflow:clip!important;white-space:nowrap!important;flex:0 0 auto!important}
+@media(max-width:767px){.app-header .top-room{max-width:none!important;font-size:9px!important;padding:7px 8px!important}.setlist-manager .song-row{grid-template-columns:34px minmax(82px,1fr) auto!important}.setlist-manager .song-actions{grid-column:3!important}}
+
+/* Safari-safe horizontal score paging */
+.score-hud{display:flex!important;flex-wrap:nowrap!important;gap:8px!important}.score-hud h2{flex:1 1 auto;min-width:120px}.score-live-beat{flex:0 1 300px;min-width:190px}.score-hud #score-fullscreen{flex:0 0 40px;align-self:center}
+.score-viewer{display:flex!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory!important;overscroll-behavior-x:contain;touch-action:pan-x!important}
+.score-song-sheet{position:relative;flex:0 0 100%!important;width:100%!important;height:100%!important;min-height:0!important;border:0!important;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;background:white}
+.score-song-sheet>header{position:absolute!important;top:0;left:0;right:0;z-index:4}.score-pages{height:100%!important;min-height:0!important;display:grid!important;place-items:center;overflow:hidden!important;padding-top:38px;box-sizing:border-box;background:#77705f}
+.score-pages iframe,.score-pages img{width:100%!important;height:100%!important;min-height:0!important;max-height:100%!important;object-fit:contain;margin:0!important}
+.score-pages p{place-self:center}
+.setlist-manager .song-row{grid-template-columns:36px minmax(180px,1fr) max-content!important}.setlist-manager .song-actions button{width:27px!important;height:27px!important}.setlist-manager .row-main strong{font-size:14px!important}
+@media(min-width:768px) and (max-width:1100px) and (orientation:portrait){.score-hud h2{min-width:100px;font-size:14px}.score-live-beat{flex-basis:230px;min-width:170px}.score-hud #score-fullscreen{flex-basis:38px;width:38px;height:38px}.setlist-manager .song-row{grid-template-columns:34px minmax(150px,1fr) max-content!important}}
+@media(min-width:1024px) and (orientation:landscape){.score-live-beat{flex-basis:330px}.score-hud h2{font-size:17px}.setlist-manager .song-row{grid-template-columns:36px minmax(260px,1fr) max-content!important}}
+@media(max-width:767px){.setlist-manager .song-row{grid-template-columns:30px minmax(105px,1fr) max-content!important}.setlist-manager .song-actions button{width:25px!important;height:25px!important}.setlist-manager .row-main strong{font-size:12px!important}}
+
+/* Stable song-title space, restrained segmented controls and Safari fullscreen inset */
+.setlist-manager .song-row{position:relative!important;display:grid!important;grid-template-columns:36px minmax(0,1fr)!important;padding:9px 198px 9px 9px!important;min-height:52px!important;box-sizing:border-box}
+.setlist-manager .row-main{grid-column:2!important;width:auto!important;max-width:none!important;overflow:hidden!important}
+.setlist-manager .row-main strong{display:block!important;width:100%!important;max-width:none!important;min-width:0!important;font-size:15px!important;line-height:1.25!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.setlist-manager .row-main small{display:block!important;width:100%!important;font-size:10px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.setlist-manager .song-actions{position:absolute!important;right:9px!important;top:50%!important;transform:translateY(-50%)!important;display:flex!important;grid-column:auto!important;width:auto!important;max-width:none!important}
+.setlist-manager .song-actions button{flex:0 0 27px!important;width:27px!important;height:27px!important}
+.mode-switch,.worship-tabs{display:grid!important;gap:3px!important;padding:3px!important;background:#f2e8cf!important;border:1px solid #d7c59b!important;border-radius:13px!important;box-shadow:none!important}
+.mode-btn,.worship-tabs button,.mode-btn:nth-child(2),.worship-tabs button:nth-child(2){background:#fdf8eb!important;background-image:none!important;color:#596274!important;border:0!important;border-radius:9px!important;box-shadow:none!important;transform:none!important;transition:background .16s,color .16s!important}
+.mode-btn.active,.mode-btn:nth-child(2).active,.worship-tabs button.active,.worship-tabs button[data-wtab=setlist].active,.worship-tabs button[data-wtab=score].active,.worship-tabs button[data-wtab=live].active{background:#dfc77f!important;background-image:none!important;color:#392f1a!important;box-shadow:none!important;transform:none!important}
+.score-panel:fullscreen,.score-panel.score-fullscreen-fallback{padding-top:calc(54px + env(safe-area-inset-top))!important}
+.score-panel:fullscreen .score-viewer,.score-panel.score-fullscreen-fallback .score-viewer{height:calc(100dvh - 116px - env(safe-area-inset-top))!important}
+.score-panel:fullscreen .score-view-warning,.score-panel.score-fullscreen-fallback .score-view-warning{top:calc(108px + env(safe-area-inset-top))!important}
+.score-panel:fullscreen .score-floating-cue,.score-panel.score-fullscreen-fallback .score-floating-cue{top:calc(144px + env(safe-area-inset-top))!important}
+@media(max-width:767px){
+  .setlist-manager .song-row{grid-template-columns:30px minmax(0,1fr)!important;padding-right:145px!important}
+  .setlist-manager .row-main strong{font-size:13px!important}
+  .setlist-manager .song-actions{right:7px!important;gap:2px!important}
+  .setlist-manager .song-actions button{flex-basis:25px!important;width:25px!important;height:25px!important}
+}
+@media(min-width:768px) and (max-width:1100px) and (orientation:portrait){.setlist-manager .song-row{padding-right:190px!important}.setlist-manager .row-main strong{font-size:15px!important}}
+
+@media(min-width:768px) and (max-width:1366px){
+  .setlist-manager .drag-handle{display:grid;place-items:center;align-self:stretch;min-width:42px;margin:-8px 0 -8px -8px;padding-left:5px;touch-action:none!important;-webkit-user-select:none;user-select:none;cursor:grab;color:#168fa8;font-size:25px}
+  .setlist-manager .drag-handle:active{cursor:grabbing;color:#f59e0b}
+  body.reorder-active{overflow-y:auto!important}
+}
+
+/* Final iPad worship ergonomics */
+.worship-tabs button[data-wtab=setlist].active{background-image:linear-gradient(135deg,#fff0b8,#ffc43d 55%,#f59e0b)!important;color:#3b2800!important;box-shadow:0 3px 0 #bd7800!important}
+.worship-tabs button[data-wtab=score].active{background-image:linear-gradient(135deg,#d8f7f2,#65d8db 55%,#1eafc7)!important;color:#143841!important;box-shadow:0 3px 0 #16889d!important}
+.worship-tabs button[data-wtab=live].active{background-image:linear-gradient(135deg,#e5f8dc,#8cdb77 55%,#42b66a)!important;color:#183a23!important;box-shadow:0 3px 0 #278249!important}
+.setlist-manager .song-list{grid-template-columns:1fr!important}
+.setlist-manager .song-row{grid-template-columns:42px 32px minmax(0,1fr) auto!important}
+.setlist-manager .song-row .song-number{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:linear-gradient(145deg,#ffe39a,#ffb703);color:#3b2900!important;font-size:12px}
+.setlist-manager .song-actions{grid-column:3/5!important}
+.quick-jump-list{display:grid;gap:6px;max-height:58dvh;overflow-y:auto}
+.quick-jump-list button{display:grid;grid-template-columns:32px 1fr auto;gap:8px;align-items:center;text-align:left;padding:9px;border:1px solid #d8c79e;border-radius:9px;background:linear-gradient(145deg,#fffef8,#f8efd9);color:#263448}
+.quick-jump-list button b{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#ffca45;color:#3b2900}.quick-jump-list button small{color:#68758a}.quick-jump-list button:active{transform:scale(.98);border-color:#18a9c0}
+.score-tools{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:245px}
+.score-tools .score-upload,.score-tools button{min-width:0;border:1px solid #d29b16;border-radius:11px;padding:8px 10px;background:linear-gradient(135deg,#ffe184,#ffb703);color:#3e2a00;font-size:10px;font-weight:900;cursor:pointer}
+.score-tools button{background:linear-gradient(135deg,#d8f7f2,#4ccbd4);border-color:#2797aa;color:#153b43}
+.score-panel:fullscreen{width:100vw;height:100vh;max-width:none;border:0;border-radius:0;padding:10px;background:#ece5d4}.score-panel:fullscreen .score-viewer{height:calc(100vh - 72px)}
+.score-panel.score-fullscreen-fallback{position:fixed!important;inset:0!important;z-index:1000!important;width:100vw!important;height:100dvh!important;max-width:none!important;min-height:0!important;border:0!important;border-radius:0!important;padding:10px!important;background:#ece5d4!important}.score-panel.score-fullscreen-fallback .score-viewer{height:calc(100dvh - 72px)!important}
+.score-viewer{scroll-snap-type:y proximity}.score-viewer iframe,.score-viewer img{scroll-snap-align:start;margin-bottom:10px}.score-viewer iframe{height:100%;min-height:600px}
+@media(min-width:768px) and (max-width:1366px){
+  .app-dialog[open]{width:min(calc(100vw - 40px),520px)!important;max-width:520px!important;transform:translate(-50%,-50%)!important}
+  .app-dialog input,.app-dialog textarea,.app-dialog select{font-size:16px!important}
+  .tempo-card details[open]{max-height:none!important;overflow:visible!important}
+  .tempo-card:has(details[open]){overflow-y:auto!important}
+}
+@media(min-width:768px) and (max-width:1100px) and (orientation:portrait){
+  .tempo-card{height:auto!important;min-height:390px!important;max-height:none!important}
+  .tempo-card details[open]{padding-bottom:12px}
+  .score-hud{grid-template-columns:1fr 1.2fr!important}.score-tools{grid-column:1/-1;grid-template-columns:1fr 1fr}.score-panel{height:calc(100dvh - 145px)!important}
+}
+
+@media(min-width:768px){.cue-shell{grid-column:9/-1;grid-row:2/5}}
+@media(min-width:768px) and (min-height:650px){.cue-shell{grid-row:2/4}}
+
+/* Warm daylight theme and responsive, immediate top controls */
+:root{--sun:#ffb703;--sun-soft:#ffe29a;--sky:#18b9d4;--ink:#243044;--paper:#fffaf0;--paper-2:#f8efd9;--line:#dfc98f}
+body{background:#f4ecd9!important;background-image:linear-gradient(145deg,#fff8e8 0%,#f4ecd9 48%,#e7f5f4 100%)!important;color:var(--ink)}
+.app-header{background:#fffaf0f2!important;border-bottom-color:#e4d4ae!important;box-shadow:0 4px 18px #8d713518}
+.app-header button,.app-header .top-room,.app-header .top-audio{touch-action:manipulation!important;-webkit-tap-highlight-color:transparent;cursor:pointer;position:relative;z-index:2}
+.app-header button:active,.app-header .top-room:active,.app-header .top-audio:active{transform:scale(.94);filter:brightness(.96)}
+.app-header .top-room{background:#fff3cf!important;border-color:#e9c86e!important;color:#9b6500!important}
+.app-header .status-pill{color:#536175!important}.app-header .status-dot{box-shadow:0 0 12px #22c98a88}
+.language-toggle{background:#fff3cf!important;border-color:#e9c86e!important;color:#8e5d00!important}
+.btn-icon,.connection-button{background:var(--sky)!important;border-color:#0a8da7!important}
+.mode-switch,.worship-tabs{background:#fffaf0!important;border-color:#dfc98f!important;box-shadow:0 6px 18px #98752b12!important}
+.mode-btn,.worship-tabs button{color:#59677b!important}
+.mode-btn.active,.worship-tabs button.active{background:#31c3dc!important;color:#15313a!important;box-shadow:0 3px 0 #16889d!important}
+.mode-btn:nth-child(2).active,.worship-tabs button:nth-child(2).active{background:var(--sun)!important;color:#382700!important;box-shadow:0 3px 0 #c47f00!important}
+.card-main,.card-secondary,.setlist-hero,.live-next-card,.live-cue-panel{background:var(--paper)!important;border-color:var(--line)!important;color:var(--ink)}
+.practice-stage,.tempo-card,.cue-shell,.setlist-manager{box-shadow:0 8px 24px #85682212}
+.tempo-heading strong,.now-playing h2,.live-next-card h2,.song-row strong{color:var(--ink)!important}
+.tempo-heading small,.time-title,.setting-group small,.song-row small{color:#758195!important}
+.segment-btn,.section-chip,.cue-tabs button,.cue-grid button,.custom-cue input{background:#fffdf8!important;border-color:#d8c79e!important;color:#344156!important}
+.segment-btn.active,.section-chip.active{background:#fff0bf!important;border-color:var(--sun)!important;color:#805500!important;box-shadow:0 0 0 2px #ffb70324!important}
+.setlist-info{background:#fffaf0!important;border:0!important;color:var(--ink)!important}
+.setlist-date{color:#2c394d!important}.setlist-voices{color:#46556a!important}.setlist-musicians{color:#6e7b8d!important;border-top-color:#e4d6b6!important}
+.setlist-manager{background:transparent!important;box-shadow:none!important}
+.setlist-primary-actions button,#live-start,.live-start{background:linear-gradient(135deg,#ffc536,#ffad0a)!important;color:#3b2800!important;box-shadow:0 3px 0 #c77e00!important}
+.setlist-more{background:#fffaf0!important;border-color:#dac99f!important}.setlist-more summary{color:#657186!important}
+.setlist-more-actions button{background:#fffdf8!important;color:#38798a!important;border-color:#d9cda9!important}
+.drag-help{background:#fff4d2!important;color:#6f654e!important}
+.song-row{background:#fffdf8!important;border-color:#d9cda9!important;color:var(--ink)!important;box-shadow:0 3px 10px #8c733118}
+.song-row.active{border-color:#15acc6!important;box-shadow:0 0 0 2px #15acc622!important}
+.live-song-shell{background:linear-gradient(145deg,#fff8e5,#fffdf8)!important;border-color:#e5a617!important;color:var(--ink)}
+.live-section-head>div{background:#e9f8f8!important;color:#263a43}.live-section-head>div:nth-child(2){background:#fffaf0!important;border-color:#dac99f!important}
+.live-metro-row button,.next-meta span{background:#f4ead2!important;color:#357789!important}
+.bar-progress i,.bar-progress i:first-child{background:#d9cba9!important}.bar-progress i.active{background:var(--sun)!important}
+.app-dialog,.app-dialog form,.app-dialog header,.app-dialog menu,.modal-dialog{background:#fffaf0!important;color:var(--ink)!important;border-color:#dac99f!important}
+.app-dialog:has(.setlist-editor),.app-dialog:has(.setlist-editor) form,.app-dialog:has(.setlist-editor) header,.app-dialog:has(.setlist-editor) menu{background:#fffaf0!important;border-color:#dac99f!important}
+.setlist-editor .icon-field,.setlist-editor textarea{background:#fffdf8!important;border-color:#d8c79e!important}.setlist-editor .icon-field input{color:var(--ink)!important}.setlist-editor>label{color:#74684d!important}
+.app-dialog input,.app-dialog textarea,.app-dialog select,.modal-dialog textarea{background:#fffdf8!important;color:var(--ink)!important;border-color:#d8c79e!important}
+
+@media(max-width:767px){
+  .worship-panel{gap:7px!important}
+  .setlist-hero{margin:0 0 4px!important;border:0!important;background:transparent!important}
+  .setlist-info{padding:8px 10px!important;border-radius:11px!important;box-shadow:0 3px 12px #8a6d2410}
+  .setlist-manager{padding:0!important;border:0!important}
+  .setlist-primary-actions button{height:36px!important}
+  .setlist-more{margin-top:5px;border-radius:9px}
+  .setlist-more summary{padding:6px 9px}
+  .drag-help{margin:6px 0!important;padding:7px 9px!important;border-radius:8px!important}
+}
+@media(max-width:767px){.language-toggle{width:38px;height:38px;min-width:38px;font-size:11px}.app-header{gap:3px}}
+
+/* Definitive segmented controls and setlist rows. Keep this block last. */
+html body .app-container>.mode-switch,
+html body #worship-panel>.worship-tabs{
+  display:flex!important;gap:4px!important;padding:4px!important;
+  background:#f0e5ca!important;background-image:none!important;
+  border:1px solid #d8c28c!important;border-radius:14px!important;
+  box-shadow:none!important;
+}
+html body .app-container>.mode-switch>.mode-btn,
+html body #worship-panel>.worship-tabs>button{
+  flex:1 1 0!important;min-width:0!important;margin:0!important;
+  background:transparent!important;background-image:none!important;
+  border:0!important;border-radius:10px!important;color:#68665e!important;
+  box-shadow:none!important;transform:none!important;
+}
+html body .app-container>.mode-switch>.mode-btn.active,
+html body .app-container>.mode-switch>.mode-btn:nth-child(2).active,
+html body #worship-panel>.worship-tabs>button.active,
+html body #worship-panel>.worship-tabs>button:nth-child(2).active,
+html body #worship-panel>.worship-tabs>button[data-wtab].active{
+  background:#dcc77e!important;background-image:none!important;
+  color:#362e1e!important;box-shadow:inset 0 0 0 1px #c4a957!important;
+  transform:none!important;
+}
+.setlist-manager .song-list>.song-row{
+  display:flex!important;grid-template-columns:none!important;align-items:center!important;
+  gap:10px!important;min-width:0!important;padding:9px 10px!important;
+}
+.setlist-manager .song-list>.song-row>.drag-handle{
+  flex:0 0 34px!important;min-width:34px!important;margin:0!important;padding:0!important;
+}
+.setlist-manager .song-list>.song-row>.row-main{
+  display:block!important;position:static!important;grid-column:auto!important;
+  flex:1 1 auto!important;width:auto!important;max-width:none!important;min-width:0!important;
+  overflow:hidden!important;
+}
+.setlist-manager .song-list>.song-row>.row-main strong,
+.setlist-manager .song-list>.song-row>.row-main small{
+  display:block!important;width:100%!important;max-width:none!important;min-width:0!important;
+  white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+}
+.setlist-manager .song-list>.song-row>.row-main strong{font-size:16px!important;line-height:1.25!important}
+.setlist-manager .song-list>.song-row>.song-actions{
+  display:flex!important;position:static!important;grid-column:auto!important;
+  flex:0 0 auto!important;width:auto!important;max-width:none!important;
+  transform:none!important;margin-left:auto!important;gap:4px!important;
+}
+@media(max-width:767px){
+  .setlist-manager .song-list>.song-row{gap:6px!important;padding:8px!important}
+  .setlist-manager .song-list>.song-row>.drag-handle{flex-basis:25px!important;min-width:25px!important}
+  .setlist-manager .song-list>.song-row>.row-main strong{font-size:14px!important}
+  .setlist-manager .song-list>.song-row>.song-actions{gap:2px!important}
+}
+
+/* Flat segmented controls: one container and simple dividers. */
+html body .app-container>.mode-switch,
+html body #worship-panel>.worship-tabs{gap:0!important;padding:0!important;overflow:hidden!important}
+html body .app-container>.mode-switch>.mode-btn,
+html body #worship-panel>.worship-tabs>button{border-radius:0!important;box-shadow:none!important;outline:0!important}
+html body .app-container>.mode-switch>.mode-btn+.mode-btn,
+html body #worship-panel>.worship-tabs>button+button{border-left:1px solid #d2bd88!important}
+html body .app-container>.mode-switch>.mode-btn.active,
+html body .app-container>.mode-switch>.mode-btn:nth-child(2).active,
+html body #worship-panel>.worship-tabs>button.active,
+html body #worship-panel>.worship-tabs>button:nth-child(2).active,
+html body #worship-panel>.worship-tabs>button[data-wtab].active{
+  border-radius:0!important;box-shadow:none!important;background:#dfcd91!important;
+}
+#score-page-number{display:block;flex:0 0 auto;align-self:center;margin:0;color:#766b52;font-size:11px;font-weight:900;white-space:nowrap}
+.score-song-sheet>.score-pages{padding-top:0!important}
+.is-follower .host-locked{pointer-events:none!important;opacity:.45!important}
+.is-follower button:disabled,.is-follower input:disabled,.is-follower select:disabled{cursor:not-allowed!important;opacity:.42!important;filter:saturate(.35)}
+.is-follower #live-start{opacity:1!important;filter:none!important;cursor:pointer!important;background:linear-gradient(135deg,#8bd8cd,#58bfae)!important}
+.is-follower .live-song-shell{border-color:#57ad9f!important}
+
+/* Header order: room is the first item on the left. */
+.app-header .top-room{order:-10!important;margin-left:0!important}
+.app-header .brand{order:-9!important}
+.app-header .top-audio,.app-header .language-toggle,.app-header .header-actions{margin-left:0!important}
+.app-header .header-actions{margin-left:auto!important}
+
+/* More actions is a single flat segmented row. */
+.setlist-more{width:100%!important;border:1px solid #d8c28c!important;border-radius:10px!important;overflow:hidden!important}
+.setlist-more-actions{display:flex!important;grid-template-columns:none!important;gap:0!important;padding:0!important;overflow-x:auto!important}
+.setlist-more-actions button{flex:1 0 max-content!important;height:36px!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;padding:6px 11px!important}
+.setlist-more-actions button+button{border-left:1px solid #d8c28c!important}
+
+/* Worship custom cue composer. */
+.worship-custom-cue{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:6px!important;margin-top:9px!important}
+.worship-custom-cue input{min-width:0!important}
+.worship-custom-cue button{white-space:nowrap!important}
+
+/* Compact, recognizable song actions. */
+.song-actions button[data-act=hide]:after{content:'\1F441'!important;font-size:17px!important;color:#168fa8!important}
+.song-actions button[data-act=copy]:after{content:'\29C9'!important;font-size:18px!important;color:#66758a!important}
+.song-row.hidden-song .song-actions button[data-act=hide]:after{opacity:.45!important}
+
+/* The audio, language, status and QR controls stay together on the right. */
+.app-header>.header-actions{display:flex!important;align-items:center!important;gap:6px!important;margin-left:auto!important;order:10!important}
+.app-header>.header-actions .top-audio,.app-header>.header-actions .language-toggle{margin:0!important;flex:0 0 auto!important}
+
+/* Setlist may extend naturally beyond one iPad viewport. */
+@media(min-width:768px){
+  body.setlist-page{height:auto!important;min-height:100dvh!important;overflow-y:auto!important}
+  body.setlist-page .app-container{height:auto!important;max-height:none!important;overflow:visible!important}
+  body.setlist-page .worship-panel{height:auto!important;max-height:none!important;overflow:visible!important;grid-template-rows:auto!important}
+  body.setlist-page .worship-panel>.setlist-manager{height:auto!important;max-height:none!important;overflow:visible!important;display:block!important}
+  body.setlist-page .setlist-manager .song-list{height:auto!important;max-height:none!important;overflow:visible!important}
+}
+
+/* Visible close control on every generated dialog. */
+.app-dialog header{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important}
+.app-dialog header>button[value=cancel]{
+  display:grid!important;place-items:center!important;position:relative!important;z-index:20!important;
+  flex:0 0 34px!important;width:34px!important;height:34px!important;min-width:34px!important;
+  margin:0!important;padding:0!important;border:1px solid #c9a753!important;border-radius:50%!important;
+  background:#fff1c7!important;color:#3d3423!important;font-size:23px!important;font-weight:700!important;
+  line-height:1!important;opacity:1!important;visibility:visible!important;
+}
+.app-dialog header>button[value=cancel]:hover,.app-dialog header>button[value=cancel]:active{background:#dfc77f!important;color:#241d10!important}
+
+/* Top segmented controls touch every edge of their shared container. */
+html body .app-container>.mode-switch,
+html body #worship-panel>.worship-tabs{align-items:stretch!important}
+html body .app-container>.mode-switch>.mode-btn,
+html body #worship-panel>.worship-tabs>button{height:100%!important;align-self:stretch!important;margin:0!important;padding-top:0!important;padding-bottom:0!important}
+
+/* Keep only the localized swipe instruction rendered in the card. */
+.now-playing:after{display:none!important;content:none!important}
+
+.song-actions button[data-act=delete-score]:after{content:'\266C\00D7'!important;font-size:15px!important;color:#c44f5d!important}
+.song-actions button[data-act=delete-score]{background:#fff0ef!important;border-color:#e5aaa5!important}
+
+/* Wide desktop gets its own denser, full-width composition. */
+@media(min-width:1101px){
+  .app-container{width:calc(100vw - 48px)!important;max-width:1500px!important}
+  .mode-switch,.worship-panel>.worship-tabs{width:100%!important}
+  .worship-panel>.setlist-hero,.worship-panel>.setlist-manager{width:100%!important;box-sizing:border-box!important}
+  .setlist-manager .song-list{grid-template-columns:1fr!important}
+  .setlist-manager .song-list>.song-row{min-height:54px!important;padding:9px 12px!important}
+  .setlist-manager .song-list>.song-row>.row-main strong{font-size:16px!important}
+  body:not(.setlist-page){overflow:hidden!important}
+  .practice-start{grid-column:1/5!important;grid-row:2!important}
+  .practice-stage{grid-column:1/5!important;grid-row:3!important;min-width:0!important}
+  .tempo-card{grid-column:5/9!important;grid-row:2/4!important;min-width:0!important;width:auto!important;overflow:hidden!important}
+  .cue-shell{grid-column:9/-1!important;grid-row:2/4!important;min-width:0!important;width:auto!important;height:100%!important;overflow:hidden!important;padding:12px!important;box-sizing:border-box!important}
+  .cue-shell .cue-tabs{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;overflow:visible!important;gap:0!important}
+  .cue-shell .cue-tabs button{min-width:0!important;padding:7px 5px!important;font-size:11px!important}
+  .cue-shell .cue-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:6px!important;overflow-y:auto!important}
+  .cue-shell .cue-grid .cue-button{min-width:0!important;min-height:58px!important;padding:7px!important;grid-template-columns:22px minmax(0,1fr)!important}
+  .cue-shell .cue-grid .cue-button span{font-size:11px!important;overflow-wrap:anywhere!important}
+  .cue-shell .cue-grid .cue-button small{font-size:8px!important}
+  .tempo-card .tempo-heading,.tempo-card .segmented-control,.tempo-card .advanced-settings{min-width:0!important;width:100%!important;box-sizing:border-box!important}
+  .tempo-card .segmented-control{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important}
+  .tempo-card .segment-btn,.tempo-card #custom-signature{min-width:0!important;width:100%!important;padding-left:4px!important;padding-right:4px!important}
+}
+
+.drag-help{display:none!important}
+
+/* Per-score-page local doodles. */
+.score-panel{position:relative!important}
+#score-doodle{flex:0 0 40px;width:40px;height:40px;border:1px solid #d3b769;border-radius:9px;background:#fff5d8;color:#8b5b00;font-size:20px;font-weight:900;cursor:pointer}
+#score-doodle.active{background:#ef4444;color:white;border-color:#b91c1c}
+#score-doodle-canvas{display:block;position:absolute;z-index:20;pointer-events:none;touch-action:pan-x;cursor:default}
+#score-doodle-tools{display:none;position:absolute;z-index:24;right:16px;top:62px;align-items:center;gap:6px;padding:6px;border:1px solid #d8c28c;border-radius:11px;background:#fffaf0eF;box-shadow:0 8px 24px #0003}
+#score-doodle-tools input{width:34px;height:34px;padding:2px;border:0;background:transparent}
+#score-doodle-tools button{height:34px;padding:0 11px;border:1px solid #d8c28c;border-radius:7px;background:#fff;color:#3d4554;font-weight:800}
+.score-panel.doodle-active #score-doodle-canvas{display:block;pointer-events:auto;touch-action:none;cursor:crosshair}
+.score-panel.doodle-active #score-doodle-tools{display:flex}
+#score-doodle-tools[data-tool=draw] [data-doodle=draw],#score-doodle-tools[data-tool=erase] [data-doodle=erase]{background:#dfc77f!important;color:#332b1b!important;border-color:#b99c50!important}
+@media(max-width:1100px){#score-doodle{flex-basis:36px;width:36px;height:36px;font-size:17px}.score-hud{gap:5px!important}}
+
+/* Hidden songs keep usable actions; only the card content is muted. */
+.setlist-manager .song-row.hidden-song{opacity:1!important;background:#e4e3de!important;border-color:#b8b5ad!important;filter:none!important}
+.setlist-manager .song-row.hidden-song>.row-main,.setlist-manager .song-row.hidden-song>.drag-handle{opacity:.48!important;filter:grayscale(1)!important}
+.setlist-manager .song-row.hidden-song>.song-actions{opacity:1!important;filter:none!important}
+.song-row.hidden-song .song-actions button[data-act=hide]:after{content:'\2298'!important;opacity:1!important;color:#596579!important}
+
+/* Score-only pinch zoom and pan; doodles share the same transform. */
+.score-panel .score-pages,#score-doodle-canvas{transform-origin:center center!important;will-change:transform}
+.score-panel .score-viewer{touch-action:pan-x!important;overscroll-behavior:contain!important}
+.score-panel.score-zoomed .score-viewer{touch-action:none!important;cursor:grab}
+.score-panel.score-zoomed .score-viewer:active{cursor:grabbing}
+.score-panel.score-zoomed .score-song-sheet{overflow:hidden!important}
+
+/* Metronome cue categories use one flat segmented control. */
+.cue-shell .cue-tabs{display:flex!important;grid-template-columns:none!important;gap:0!important;padding:0!important;border:1px solid #d2bd88!important;border-radius:10px!important;overflow:hidden!important;background:#f0e5ca!important}
+.cue-shell .cue-tabs button{flex:1 1 0!important;min-width:0!important;margin:0!important;padding:8px 4px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;justify-content:center!important;font-size:10px!important}
+.cue-shell .cue-tabs button+button{border-left:1px solid #d2bd88!important}
+.cue-shell .cue-tabs button.active{background:#dfcd91!important;color:#362e1e!important}
+
+/* Song library management dialog. */
+.library-manager{display:grid;gap:12px}.library-section{display:grid;gap:6px}.library-section h3{margin:4px 0;color:#66552d;font-size:13px}
+.library-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 9px;border:1px solid #d8c79e;border-radius:9px;background:#fffdf8}
+.library-row>span{display:grid;min-width:0}.library-row b,.library-row small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.library-row small{color:#758195;font-size:9px;margin-top:2px}
+.library-row>div{display:flex;gap:4px}.library-row button{min-height:32px!important;padding:5px 9px!important;border:1px solid #d8c79e!important;border-radius:7px!important;background:#eef9f7!important;color:#267184!important;font-weight:800}.library-row button.danger{background:#fff0ef!important;color:#b43f50!important;border-color:#e5aaa5!important}
+
+/* Setlist's three primary tools are one segmented strip attached to the card. */
+.setlist-manager .setlist-toolbar{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:0!important;margin:0!important;padding:0!important;border:0!important;border-bottom:1px solid #d2bd88!important;border-radius:0!important;background:#f0e5ca!important;overflow:visible!important}
+.setlist-manager .setlist-primary-actions{display:contents!important}
+.setlist-manager .setlist-primary-actions>button,.setlist-manager .setlist-more>summary{height:42px!important;min-width:0!important;margin:0!important;padding:0 8px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;display:flex!important;align-items:center!important;justify-content:center!important;color:#4f4b40!important;font-size:11px!important;font-weight:900!important}
+.setlist-manager .setlist-primary-actions>button+button,.setlist-manager .setlist-more>summary{border-left:1px solid #d2bd88!important}
+.setlist-manager .setlist-more{display:contents!important;border:0!important;background:transparent!important}
+.setlist-manager .setlist-more>summary:after{margin-left:5px!important}
+.setlist-manager .setlist-more-actions{grid-column:1/-1!important;display:flex!important;gap:0!important;padding:0!important;border-top:1px solid #d2bd88!important;background:#fffaf0!important;overflow-x:auto!important}
+.setlist-manager .setlist-more:not([open])>.setlist-more-actions{display:none!important}
+.setlist-manager .setlist-more-actions>button{flex:1 0 max-content!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important}
+.setlist-manager .setlist-more-actions>button+button{border-left:1px solid #d2bd88!important}
+
+/* Song editor uses quiet underline fields instead of boxed inputs. */
+.app-dialog .song-editor-fields{gap:8px 14px!important}
+.app-dialog .song-editor-fields label{margin-top:7px!important}
+.app-dialog .song-editor-fields input,.app-dialog .song-editor-fields select{min-height:38px!important;padding:8px 2px 5px!important;border:0!important;border-bottom:1px solid #b9aa86!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#293447!important}
+.app-dialog .song-editor-fields input:focus,.app-dialog .song-editor-fields select:focus{outline:0!important;border-bottom:2px solid #18a9c0!important}
+
+/* One private, local note per device and song. */
+#score-personal-note{flex:0 1 210px!important;min-width:90px!important;max-width:240px!important;height:36px!important;padding:6px 3px!important;border:0!important;border-bottom:1px solid #b9aa86!important;border-radius:0!important;background:transparent!important;color:#39465b!important;font-size:11px!important;box-shadow:none!important}
+#score-personal-note:focus{outline:0!important;border-bottom:2px solid #18a9c0!important}
+@media(max-width:900px){#score-personal-note{flex-basis:130px!important;max-width:150px!important;font-size:10px!important}}
+
+/* Score HUD: song on the left; private note and reading controls on the right. */
+.score-hud{display:grid!important;grid-template-columns:minmax(120px,1fr) minmax(310px,1.7fr)!important;align-items:center!important;gap:12px!important}
+.score-hud h2{grid-column:1;min-width:0!important;align-self:center}
+.score-hud-actions{grid-column:2;display:grid!important;grid-template-rows:auto auto;gap:5px;min-width:0;padding:0!important;border:0!important;background:transparent!important}
+.score-hud-actions #score-personal-note{width:100%!important;max-width:none!important;height:30px!important;margin:0!important;justify-self:stretch}
+.score-hud-lower{display:grid!important;grid-template-columns:auto minmax(130px,1fr) 38px 40px;align-items:center;gap:6px;min-width:0;padding:0!important;border:0!important;background:transparent!important}
+.score-hud-lower #score-page-number{display:block!important;min-width:42px;margin:0!important;color:#745d2c;font-size:11px;font-weight:900;white-space:nowrap;text-align:center}
+.score-hud-lower .score-live-beat{min-width:0!important;width:auto!important;padding:5px 8px!important}
+.score-hud-lower #score-doodle{width:38px;height:36px;min-width:38px}.score-hud-lower #score-fullscreen{width:40px;height:36px;min-width:40px}
+.score-panel:fullscreen .score-hud,.score-panel.score-fullscreen-fallback .score-hud{padding-left:max(44px,env(safe-area-inset-left))!important}
+@media(max-width:700px){.score-hud{grid-template-columns:minmax(82px,.72fr) minmax(235px,1.8fr)!important;gap:6px!important}.score-hud h2{font-size:13px!important;padding:0 3px!important}.score-hud-lower{grid-template-columns:auto minmax(82px,1fr) 34px 36px;gap:3px}.score-hud-actions #score-personal-note{font-size:10px!important}.score-hud-lower #score-doodle{width:34px;min-width:34px}.score-hud-lower #score-fullscreen{width:36px;min-width:36px}}
+
+/* Clear, inline validation for the Add/Edit Song dialog. */
+.song-form-error{min-height:18px;margin:9px 0 0;color:#b42318;font-size:12px;font-weight:800}
+.app-dialog .song-editor-fields .field-invalid,.app-dialog textarea.field-invalid{border-color:#d92d20!important;border-bottom-color:#d92d20!important;background:#fff1f0!important}
+
+.score-panel.score-reading-only #score-personal-note{cursor:default;opacity:.72;border-bottom-color:transparent!important}
+.score-panel.score-reading-only #score-doodle{cursor:not-allowed;opacity:.42;filter:grayscale(1)}
+
+/* Full-screen score header uses the full width: prominent song, controls at edge. */
+.score-panel:fullscreen .score-hud,.score-panel.score-fullscreen-fallback .score-hud{box-sizing:border-box!important;width:100%!important;max-width:none!important;grid-template-columns:minmax(220px,.8fr) minmax(480px,2.2fr)!important;gap:18px!important;padding-right:0!important;margin-right:0!important}
+.score-panel:fullscreen .score-hud h2,.score-panel.score-fullscreen-fallback .score-hud h2{font-size:clamp(25px,3vw,42px)!important;line-height:1.08!important;font-weight:950!important;letter-spacing:-.5px;max-width:none!important}
+.score-panel:fullscreen .score-hud-actions,.score-panel.score-fullscreen-fallback .score-hud-actions{width:100%!important;max-width:none!important;justify-self:stretch!important}
+.score-panel:fullscreen .score-hud-lower,.score-panel.score-fullscreen-fallback .score-hud-lower{width:100%!important;grid-template-columns:auto minmax(220px,1fr) 38px 40px!important;justify-content:end!important}
+.score-panel:fullscreen #score-personal-note,.score-panel.score-fullscreen-fallback #score-personal-note{width:100%!important;max-width:none!important}
+@media(max-width:900px){.score-panel:fullscreen .score-hud,.score-panel.score-fullscreen-fallback .score-hud{grid-template-columns:minmax(145px,.72fr) minmax(360px,2.1fr)!important;gap:10px!important}.score-panel:fullscreen .score-hud h2,.score-panel.score-fullscreen-fallback .score-hud h2{font-size:clamp(21px,3.4vw,30px)!important}.score-panel:fullscreen .score-hud-lower,.score-panel.score-fullscreen-fallback .score-hud-lower{grid-template-columns:auto minmax(145px,1fr) 34px 36px!important}}
+
+/* Safari only needs a small top-left close-button reserve, not an empty top row. */
+.score-panel:fullscreen,.score-panel.score-fullscreen-fallback{box-sizing:border-box!important;padding:7px 8px 8px!important}
+.score-panel:fullscreen .score-hud,.score-panel.score-fullscreen-fallback .score-hud{min-height:54px!important;padding:0 0 0 max(48px,env(safe-area-inset-left))!important}
+.score-panel:fullscreen .score-viewer,.score-panel.score-fullscreen-fallback .score-viewer{height:calc(100dvh - 70px - env(safe-area-inset-bottom))!important}
+.score-panel:fullscreen .score-view-warning,.score-panel.score-fullscreen-fallback .score-view-warning{top:62px!important}
+.score-panel:fullscreen .score-floating-cue,.score-panel.score-fullscreen-fallback .score-floating-cue{top:98px!important}
+
+/* iPad Safari: clear the close control and top status safe-area without wasting a row. */
+.score-panel:fullscreen,.score-panel.score-fullscreen-fallback{padding-top:calc(13px + env(safe-area-inset-top))!important}
+.score-panel:fullscreen .score-hud,.score-panel.score-fullscreen-fallback .score-hud{padding-left:max(64px,calc(48px + env(safe-area-inset-left)))!important}
+.score-panel:fullscreen .score-viewer,.score-panel.score-fullscreen-fallback .score-viewer{height:calc(100dvh - 76px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}
+.score-panel:fullscreen .score-view-warning,.score-panel.score-fullscreen-fallback .score-view-warning{top:calc(68px + env(safe-area-inset-top))!important}
+.score-panel:fullscreen .score-floating-cue,.score-panel.score-fullscreen-fallback .score-floating-cue{top:calc(104px + env(safe-area-inset-top))!important}
+
+/* Warm-theme connection dialog must retain strong readable contrast. */
+.modal-dialog h2{color:#263247!important}
+.modal-dialog p,.modal-dialog #pairing-status{color:#596579!important}
+.modal-dialog textarea{background:#fffdf8!important;color:#263247!important;border-color:#bda66f!important}
+.modal-dialog button{background:#f5ead0!important;color:#263247!important;border-color:#cbb57e!important}
+.modal-dialog button:hover,.modal-dialog button:focus-visible{background:#ead8aa!important;border-color:#9e7d2e!important;outline:2px solid #16a9bd!important;outline-offset:1px}
+.modal-dialog #btn-create-room,.modal-dialog #btn-apply-code,.modal-dialog #btn-scan-response{background:#19c4d4!important;color:#102b32!important;border-color:#0d9baa!important}
+.modal-dialog #btn-close-qr{background:#263247!important;color:#fffaf0!important;border-color:#263247!important}
+.modal-dialog #qrcode-canvas-container{background:#fff!important;border:1px solid #d1bd8b;border-radius:12px;padding:10px;width:max-content;max-width:100%;margin:12px auto}
+
+/* In full screen the song title sits below Safari's close control, above the score. */
+.score-panel:fullscreen .score-hud,.score-panel.score-fullscreen-fallback .score-hud{position:relative!important;min-height:86px!important;align-items:start!important}
+.score-panel:fullscreen .score-hud h2,.score-panel.score-fullscreen-fallback .score-hud h2{position:absolute!important;left:0!important;bottom:2px!important;width:min(46%,520px)!important;max-width:min(46%,520px)!important;padding:0!important;margin:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.score-panel:fullscreen .score-hud-actions,.score-panel.score-fullscreen-fallback .score-hud-actions{grid-column:2!important;align-self:start!important}
+.score-panel:fullscreen .score-viewer,.score-panel.score-fullscreen-fallback .score-viewer{height:calc(100dvh - 108px - env(safe-area-inset-top) - env(safe-area-inset-bottom))!important}
+.score-panel:fullscreen .score-view-warning,.score-panel.score-fullscreen-fallback .score-view-warning{top:calc(100px + env(safe-area-inset-top))!important}
+.score-panel:fullscreen .score-floating-cue,.score-panel.score-fullscreen-fallback .score-floating-cue{top:calc(136px + env(safe-area-inset-top))!important}
+
+/* Metronome accents: horizontal segmented rows beneath the orbit, four per row. */
+.practice-stage .accent-layout{display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto auto!important;justify-items:center!important;align-content:center!important;gap:13px!important;min-height:0}
+.practice-stage .radial-stage{grid-column:1!important;grid-row:1!important}
+.practice-stage .beat-dots-container{grid-column:1!important;grid-row:2!important;display:grid!important;grid-template-columns:repeat(var(--accent-columns,4),minmax(46px,1fr))!important;grid-template-rows:none!important;grid-auto-flow:row!important;grid-auto-rows:40px!important;gap:0!important;width:min(100%,320px)!important;max-width:320px!important;max-height:none!important;overflow:visible!important;border:1px solid #c9ad69;border-radius:12px;background:#fff9e9;box-shadow:0 4px 12px #7a5b1714}
+.practice-stage .beat-dot{box-sizing:border-box!important;width:100%!important;height:40px!important;min-width:0!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:7px!important;padding:0 8px!important;border:0!important;border-right:1px solid #d7c28d!important;border-bottom:1px solid #d7c28d!important;border-radius:0!important;background:transparent!important;color:#273348!important;box-shadow:none!important}
+.practice-stage .beat-dot:nth-child(4n){border-right:0!important}
+.practice-stage .beat-dot:last-child{border-right:0!important}
+.practice-stage .beat-dot.accent-last-row{border-bottom:0!important}
+.practice-stage .beat-dot .accent-glyph{font-size:14px!important}.practice-stage .beat-dot>b{font-size:15px!important;color:#273348!important}
+.practice-stage .beat-dot.accent-accent{background:#fff0bd!important}.practice-stage .beat-dot.accent-accent .accent-glyph{color:#e79600!important}
+.practice-stage .beat-dot.accent-normal .accent-glyph{color:#08aabe!important}.practice-stage .beat-dot.accent-soft .accent-glyph{color:#7d8aa0!important}.practice-stage .beat-dot.accent-muted .accent-glyph{color:#a5a5a5!important}
+.practice-stage .beat-dot.active{background:#17bfd0!important}.practice-stage .beat-dot.active>b,.practice-stage .beat-dot.active .accent-glyph{color:#10232a!important}
+@media(max-width:520px){.practice-stage .accent-layout{gap:10px!important}.practice-stage .beat-dots-container{width:min(100%,272px)!important;grid-auto-rows:36px!important}.practice-stage .beat-dot{height:36px!important;padding:0 5px!important;gap:5px!important}.practice-stage .beat-dot>b{font-size:13px!important}.practice-stage .beat-dot .accent-glyph{font-size:12px!important}}
+
+/* Mobile Safari: More actions expands across the whole segmented toolbar. */
+@media(max-width:767px){.setlist-manager .setlist-toolbar{position:relative!important}.setlist-manager .setlist-more{display:block!important;grid-column:3!important;width:auto!important;margin:0!important;overflow:visible!important}.setlist-manager .setlist-more>summary{width:100%!important;box-sizing:border-box!important}.setlist-manager .setlist-more-actions{position:absolute!important;left:0!important;right:0!important;top:42px!important;width:100%!important;box-sizing:border-box!important}.setlist-manager .setlist-toolbar:has(.setlist-more[open]){padding-bottom:36px!important}}
+
+/* Anchor the full-screen title to the score panel, not the indented HUD grid. */
+.score-panel:fullscreen .score-hud,.score-panel.score-fullscreen-fallback .score-hud{position:static!important}
+.score-panel:fullscreen .score-hud h2,.score-panel.score-fullscreen-fallback .score-hud h2{position:absolute!important;left:8px!important;top:calc(62px + env(safe-area-inset-top))!important;bottom:auto!important;width:min(58%,620px)!important;max-width:min(58%,620px)!important;z-index:6!important}
+
+.score-panel.score-reading-only #score-personal-note{pointer-events:none!important;user-select:none!important;-webkit-user-select:none!important}
+#song-switch-countdown{position:absolute;z-index:35;inset:0;display:grid;place-content:center;justify-items:center;gap:4px;border-radius:inherit;background:#172235d9;color:#fff;opacity:0;pointer-events:none;transform:scale(.97);transition:opacity .16s,transform .16s;backdrop-filter:blur(4px)}
+#song-switch-countdown.show{opacity:1;transform:scale(1)}
+#song-switch-countdown strong{font-size:clamp(52px,12vw,104px);line-height:.9;color:#ffb703;text-shadow:0 5px 20px #0007}
+#song-switch-countdown small{max-width:min(88%,620px);font-size:12px;font-weight:850;line-height:1.4;letter-spacing:.3px;text-align:center;color:#f8edd0;white-space:normal;overflow:visible;overflow-wrap:anywhere}
+#song-switch-countdown small span{display:block;margin-bottom:4px;font-size:11px;font-weight:800;letter-spacing:1px;color:#d8cba8}
+#song-switch-countdown small b{display:block;max-width:100%;line-height:1.12;color:#fff8e8;white-space:nowrap;overflow:visible;font-weight:950;letter-spacing:-.3px}
+#song-switch-countdown .switch-title-short{font-size:34px}#song-switch-countdown .switch-title-medium{font-size:25px}#song-switch-countdown .switch-title-long{font-size:17px}
+@media(max-width:520px){#song-switch-countdown small{max-width:94%}#song-switch-countdown .switch-title-short{font-size:27px}#song-switch-countdown .switch-title-medium{font-size:20px}#song-switch-countdown .switch-title-long{font-size:14px}}
+
+/* Edge-to-edge square segmented navigation. */
+html body .app-container>.mode-switch,html body .worship-panel>.worship-tabs{gap:0!important;padding:0!important;border-radius:0!important;overflow:hidden!important}
+html body .app-container>.mode-switch>.mode-btn,html body .worship-panel>.worship-tabs>button{margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+html body .app-container>.mode-switch>.mode-btn+.mode-btn,html body .worship-panel>.worship-tabs>button+button{border-left:1px solid #d3bd83!important}
+
+/* Live cues stay as compact as the Quick Jump / next-song card. */
+.worship-panel>.live-next-card,.worship-panel>.live-cue-panel{height:190px!important;min-height:190px!important;max-height:190px!important;box-sizing:border-box!important}
+.worship-panel>.live-next-card{gap:5px!important;padding:9px!important;overflow:hidden!important}.worship-panel>.live-next-card h2{margin:3px 0!important;font-size:16px!important}.worship-panel>.live-next-card>button{min-height:30px!important;padding:4px 9px!important}.worship-panel>.live-next-card .next-meta{gap:5px!important}.worship-panel>.live-next-card .next-meta span{padding:6px!important}.worship-panel>.live-next-card #switch-next{height:38px!important;min-height:38px!important;font-size:11px!important}.worship-panel>.live-next-card>p{display:none!important}
+.worship-panel>.live-cue-panel{display:grid!important;grid-template-rows:auto 1fr auto!important;padding:9px!important;overflow:hidden!important}
+.worship-panel>.live-cue-panel.live-control-hidden{display:none!important}
+.live-cue-panel>.setting-group{margin:0!important}.live-cue-panel>.setting-group small{font-size:9px!important}
+.live-cue-panel .cue-tabs{margin:4px 0!important;gap:0!important;border:1px solid #d8c28c;border-radius:0!important;overflow-x:auto!important}
+.live-cue-panel .cue-tabs button{flex:1 0 auto!important;min-height:30px!important;padding:4px 8px!important;border:0!important;border-radius:0!important;background:transparent!important;font-size:9px!important}
+.live-cue-panel .cue-tabs button+button{border-left:1px solid #d8c28c!important}
+.live-cue-panel .cue-grid{display:flex!important;min-height:0!important;gap:5px!important;overflow-x:auto!important;overflow-y:hidden!important;padding:3px 0!important}
+.live-cue-panel .cue-grid .cue-button{flex:0 0 104px!important;min-height:52px!important;height:52px!important;padding:5px!important;grid-template-columns:18px 1fr!important}
+.live-cue-panel .cue-grid .cue-button span{font-size:10px!important}.live-cue-panel .cue-grid .cue-button small{font-size:7px!important;line-height:1.05!important}
+.live-cue-panel .custom-cue{height:34px!important;margin-top:4px!important;gap:5px!important}.live-cue-panel .custom-cue input{height:34px!important;padding:6px 8px!important;font-size:10px!important}.live-cue-panel .custom-cue button{height:34px!important;padding:0 9px!important;font-size:9px!important}
+@media(max-width:767px){.worship-panel>.live-next-card,.worship-panel>.live-cue-panel{height:176px!important;min-height:176px!important;max-height:176px!important}.live-cue-panel .cue-grid .cue-button{flex-basis:96px!important}}
+
+/* Host next-song card is content-sized: title/quick jump, metadata, switch. */
+.worship-panel>.live-next-card{height:136px!important;min-height:136px!important;max-height:136px!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-rows:34px 26px 38px!important;align-content:center!important;gap:5px 7px!important;padding:8px 9px!important}
+.worship-panel>.live-next-card>div{min-width:0;align-self:center}.worship-panel>.live-next-card>div small{font-size:8px!important;letter-spacing:.7px!important}.worship-panel>.live-next-card h2{margin:1px 0 0!important;font-size:14px!important;line-height:1.1!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.worship-panel>.live-next-card>#quick-jump{height:32px!important;min-height:32px!important;padding:0 9px!important;font-size:9px!important;align-self:center}
+.worship-panel>.live-next-card .next-meta{grid-column:1/-1!important;height:26px!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:4px!important}.worship-panel>.live-next-card .next-meta span{display:grid!important;place-items:center!important;height:26px!important;padding:0 4px!important;font-size:9px!important;white-space:nowrap!important}
+.worship-panel>.live-next-card #switch-next{grid-column:1/-1!important;height:38px!important;min-height:38px!important;padding:0 8px!important;font-size:11px!important}
+@media(max-width:520px){.worship-panel>.live-next-card{height:132px!important;min-height:132px!important;max-height:132px!important;grid-template-rows:32px 24px 36px!important}.worship-panel>.live-next-card .next-meta,.worship-panel>.live-next-card .next-meta span{height:24px!important}.worship-panel>.live-next-card #switch-next{height:36px!important;min-height:36px!important}}
+
+/* Give Live Stage Cues the width saved by the compact Host next-song card. */
+@media(min-width:768px) and (max-width:1100px) and (orientation:portrait){.worship-panel>.live-next-card{grid-column:1/5!important;width:auto!important}.worship-panel>.live-cue-panel{grid-column:5/-1!important;width:auto!important;max-height:210px!important;height:210px!important;min-height:210px!important}.live-cue-panel .cue-grid .cue-button{flex-basis:96px!important}}
+@media(min-width:1024px) and (orientation:landscape){.worship-panel>.live-song-shell{grid-column:1/6!important;grid-row:2/5!important}.worship-panel>.live-next-card{grid-column:6/8!important;grid-row:2/5!important;width:auto!important}.worship-panel>.live-cue-panel{grid-column:8/-1!important;grid-row:2/5!important;width:auto!important}.live-cue-panel .cue-grid .cue-button{flex-basis:100px!important}}
+.worship-panel>.live-cue-panel{height:210px!important;min-height:210px!important;max-height:210px!important}
+.live-cue-panel .cue-grid .cue-button{height:66px!important;min-height:66px!important}
+#advance-section:disabled{opacity:.58!important;cursor:default!important;background:#e7dfca!important;color:#7c725d!important}
+
+/* Equal-height side forms; six live cue cards use a roomy 3 × 2 grid. */
+.worship-panel>.live-next-card{height:210px!important;min-height:210px!important;max-height:210px!important;align-content:center!important}
+.live-cue-panel .cue-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-rows:repeat(2,minmax(0,1fr))!important;gap:5px!important;overflow:hidden!important}
+.live-cue-panel .cue-grid .cue-button{box-sizing:border-box!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;min-width:0!important;display:grid!important;grid-template-columns:18px minmax(0,1fr)!important}
+@media(max-width:430px){.live-cue-panel .cue-grid{gap:3px!important}.live-cue-panel .cue-grid .cue-button{padding:4px 3px!important;grid-template-columns:14px minmax(0,1fr)!important}.live-cue-panel .cue-grid .cue-button span{font-size:9px!important}.live-cue-panel .cue-grid .cue-button small{font-size:6px!important}}
+
+/* Final responsive live workspace: natural mobile cards, stable desktop sidebar. */
+@media(max-width:767px){.worship-panel>.live-next-card{height:auto!important;min-height:128px!important;max-height:none!important}.worship-panel>.live-cue-panel{height:auto!important;min-height:218px!important;max-height:none!important}.live-cue-panel .cue-grid{min-height:132px!important}}
+@media(min-width:1024px) and (orientation:landscape){.worship-panel>.live-song-shell{grid-column:1/9!important;grid-row:2/5!important}.worship-panel>.live-next-card{grid-column:9/-1!important;grid-row:2!important;width:76%!important;justify-self:end!important;height:136px!important;min-height:136px!important;max-height:136px!important}.worship-panel>.live-cue-panel{grid-column:9/-1!important;grid-row:3/5!important;width:100%!important;justify-self:stretch!important;height:224px!important;min-height:224px!important;max-height:224px!important}.live-cue-panel .cue-grid{min-height:136px!important}}
+
+/* Desktop live control: aligned sidebar and a complete, non-scrolling console. */
+@media(min-width:1024px) and (orientation:landscape){
+  .worship-panel{grid-template-columns:repeat(12,minmax(0,1fr))!important;grid-template-rows:46px 138px minmax(0,1fr)!important;align-items:start!important}
+  .worship-panel>.live-song-shell{grid-column:1/9!important;grid-row:2/4!important;height:100%!important;min-height:0!important;overflow:hidden!important;padding:10px 14px!important}
+  .worship-panel>.live-next-card{grid-column:9/-1!important;grid-row:2!important;width:100%!important;justify-self:stretch!important;height:138px!important;min-height:138px!important;max-height:138px!important}
+  .worship-panel>.live-cue-panel{grid-column:9/-1!important;grid-row:3!important;width:100%!important;justify-self:stretch!important;height:292px!important;min-height:292px!important;max-height:292px!important;padding:10px 12px!important}
+  .live-song-shell .now-playing{min-height:0!important;padding:0 0 5px!important}.live-song-shell .now-playing h2{font-size:22px!important;margin:5px 0!important}.live-song-shell .now-playing>p{display:none!important}.live-song-shell .song-badges>*{padding:4px 7px!important;font-size:9px!important}
+  .live-song-shell .live-sections{gap:5px!important;padding:9px 10px!important}.live-song-shell .live-section-head>div{padding:7px 10px!important}.live-song-shell .live-section-head b{font-size:14px!important}.live-song-shell .live-section-head small{font-size:8px!important}
+  .live-song-shell .section-strip{margin:2px 0!important;padding:3px 0!important;gap:5px!important}.live-song-shell .section-chip{min-width:82px!important;padding:6px 8px!important}.live-song-shell .section-chip b{font-size:11px!important}.live-song-shell .section-chip small{font-size:8px!important;margin-top:2px!important}
+  .live-song-shell #advance-section{height:44px!important;min-height:44px!important;font-size:10px!important}.live-song-shell .live-metro-row{grid-template-columns:1fr 50px 104px 50px!important;gap:5px!important}.live-song-shell .live-metro-row button{height:46px!important}.live-song-shell .live-metro-row>div b{font-size:15px!important}.live-song-shell .live-metro-row>strong{font-size:23px!important}
+  .live-song-shell .bar-progress{gap:5px!important}.live-song-shell .bar-progress i{height:7px!important}.live-song-shell #live-start{height:48px!important;min-height:48px!important;font-size:12px!important}
+  .live-cue-panel .cue-grid{min-height:182px!important;grid-template-rows:repeat(2,minmax(0,1fr))!important}.live-cue-panel .custom-cue{height:36px!important;margin-top:6px!important}.live-cue-panel .custom-cue input,.live-cue-panel .custom-cue button{height:36px!important}
+}
+.live-song-shell{position:relative}
+@media(min-width:768px){.setlist-manager .setlist-toolbar{margin:-11px -11px 8px!important;border-radius:15px 15px 0 0!important}}

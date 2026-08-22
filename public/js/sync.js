@@ -5,7 +5,8 @@
 class MetronomeSyncEngine {
   constructor(audio) {
     this.audio = audio;
-    this.deviceId = 'DEV_' + Math.random().toString(36).slice(2, 8).toUpperCase();
+    this.deviceId = localStorage.getItem('syncbeat-device-id') || ('DEV_' + Math.random().toString(36).slice(2, 8).toUpperCase());
+    localStorage.setItem('syncbeat-device-id', this.deviceId);
     this.roomId = 'MAIN';
     this.role = 'standalone';
     this.hostPeers = new Map();
@@ -21,6 +22,8 @@ class MetronomeSyncEngine {
     this.isPlaying = false;
     this.bpm = 120;
     this.beatsPerMeasure = 4;
+    this.noteValue = 4;
+    this.accentPattern = ['accent', 'normal', 'normal', 'normal'];
     this.startMasterTime = null;
     this.schedulerTimer = null;
     this.animationFrameId = null;
@@ -29,6 +32,10 @@ class MetronomeSyncEngine {
     this.onBeat = null;
     this.onStateChange = null;
     this.onConnectionChange = null;
+    this.onAppEvent = null;
+    this.appState = null;
+    this.followingPaused = false;
+    this.pausedHostState = null;
   }
 
   init(roomId) {
@@ -183,8 +190,8 @@ class MetronomeSyncEngine {
 
   snapshot() {
     return {
-      isPlaying: this.isPlaying, bpm: this.bpm, beatsPerMeasure: this.beatsPerMeasure,
-      startMasterTime: this.startMasterTime, soundType: this.audio.soundType || 'synth'
+      isPlaying: this.isPlaying, bpm: this.bpm, beatsPerMeasure: this.beatsPerMeasure, noteValue: this.noteValue, accentPattern: this.accentPattern,
+      startMasterTime: this.startMasterTime, soundType: this.audio.soundType || 'synth', appState: this.appState
     };
   }
 
@@ -239,7 +246,10 @@ class MetronomeSyncEngine {
   applyState(state) {
     this.bpm = state.bpm;
     this.beatsPerMeasure = state.beatsPerMeasure;
+    if (state.noteValue) this.noteValue = state.noteValue;
+    if (state.accentPattern) this.accentPattern = state.accentPattern;
     if (state.soundType) this.audio.setSoundType(state.soundType);
+    if (state.appState) { this.appState = state.appState; if (this.onAppEvent) this.onAppEvent(state.appState); }
     if (state.isPlaying && state.startMasterTime) {
       this.startPlayback(state.startMasterTime, state.bpm, state.beatsPerMeasure);
     } else {
@@ -249,6 +259,17 @@ class MetronomeSyncEngine {
   }
 
   applyEvent(event) {
+    if (this.role === 'guest' && this.followingPaused) {
+      if (event.action === 'START') this.pausedHostState = { startMasterTime: event.startMasterTime, bpm: event.bpm || this.bpm, beatsPerMeasure: event.beatsPerMeasure || this.beatsPerMeasure };
+      if (event.action === 'STOP') this.pausedHostState = null;
+      if (event.action === 'TEMPO') { this.bpm = event.bpm; if (this.pausedHostState) this.pausedHostState.bpm = event.bpm; }
+      if (event.action === 'SIGNATURE') { this.beatsPerMeasure = event.beatsPerMeasure; this.noteValue = event.noteValue; this.accentPattern = event.accentPattern; if (this.pausedHostState) this.pausedHostState.beatsPerMeasure = event.beatsPerMeasure; }
+      if (event.action === 'ACCENTS') this.accentPattern = event.accentPattern;
+      if (event.action === 'SOUND') this.audio.setSoundType(event.soundType);
+      if (event.action === 'APP' && this.onAppEvent) this.onAppEvent(event.payload);
+      if (this.onStateChange) this.onStateChange();
+      return;
+    }
     if (event.action === 'START') this.startPlayback(event.startMasterTime, event.bpm, event.beatsPerMeasure);
     if (event.action === 'STOP') this.stopPlayback();
     if (event.action === 'TEMPO') {
@@ -256,7 +277,10 @@ class MetronomeSyncEngine {
       if (event.startMasterTime) this.startPlayback(event.startMasterTime, this.bpm, this.beatsPerMeasure);
     }
     if (event.action === 'BEATS') this.beatsPerMeasure = event.beatsPerMeasure;
+    if (event.action === 'SIGNATURE') { this.beatsPerMeasure = event.beatsPerMeasure; this.noteValue = event.noteValue; this.accentPattern = event.accentPattern; }
+    if (event.action === 'ACCENTS') this.accentPattern = event.accentPattern;
     if (event.action === 'SOUND') this.audio.setSoundType(event.soundType);
+    if (event.action === 'APP' && this.onAppEvent) this.onAppEvent(event.payload);
     if (this.onStateChange) this.onStateChange();
   }
 
@@ -273,11 +297,9 @@ class MetronomeSyncEngine {
   }
 
   sendCommand(command) {
-    if (this.role === 'guest' && this.hostPeer) {
-      this.send(this.hostPeer.channel, { type: 'COMMAND', payload: command });
-    } else {
-      this.applyHostCommand(command);
-    }
+    if (this.role === 'guest') return false;
+    this.applyHostCommand(command);
+    return true;
   }
 
   sendStart(bpm, beatsPerMeasure) { this.audio.init(); this.sendCommand({ action: 'START', bpm, beatsPerMeasure }); }
@@ -285,11 +307,49 @@ class MetronomeSyncEngine {
   sendTempo(bpm) { this.bpm = bpm; this.sendCommand({ action: 'TEMPO', bpm }); }
   sendBeatsPerMeasure(beatsPerMeasure) {
     this.beatsPerMeasure = beatsPerMeasure;
+    this.accentPattern = Array.from({ length: beatsPerMeasure }, (_, i) => i === 0 ? 'accent' : 'normal');
     this.sendCommand({ action: 'BEATS', beatsPerMeasure });
+  }
+  sendAccentPattern(accentPattern) {
+    this.accentPattern = accentPattern.slice();
+    this.sendCommand({ action: 'ACCENTS', accentPattern: this.accentPattern });
+  }
+  sendTimeSignature(beatsPerMeasure, noteValue) {
+    this.beatsPerMeasure = beatsPerMeasure;
+    this.noteValue = noteValue;
+    this.accentPattern = Array.from({ length: beatsPerMeasure }, (_, i) => i === 0 ? 'accent' : 'normal');
+    this.sendCommand({ action: 'SIGNATURE', beatsPerMeasure, noteValue, accentPattern: this.accentPattern });
   }
   sendSoundType(soundType) {
     this.audio.setSoundType(soundType);
     this.sendCommand({ action: 'SOUND', soundType });
+  }
+
+  sendAppEvent(payload) {
+    if (this.role === 'guest') return false;
+    if (payload && (payload.type === 'SONG' || payload.type === 'SECTION')) this.appState = payload;
+    this.broadcast({ type: 'EVENT', payload: { action: 'APP', payload } });
+    return true;
+  }
+
+  pauseFollowing() {
+    if (this.role !== 'guest' || this.followingPaused) return;
+    this.followingPaused = true;
+    if (this.isPlaying && this.startMasterTime) this.pausedHostState = { startMasterTime: this.startMasterTime, bpm: this.bpm, beatsPerMeasure: this.beatsPerMeasure };
+    this.isPlaying = false;
+    if (this.schedulerTimer) clearInterval(this.schedulerTimer);
+    if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+    this.schedulerTimer = null;
+    this.animationFrameId = null;
+    if (this.onStateChange) this.onStateChange();
+  }
+
+  resumeFollowing() {
+    if (this.role !== 'guest' || !this.followingPaused) return;
+    this.followingPaused = false;
+    const state = this.pausedHostState;
+    if (state) this.startPlayback(state.startMasterTime, state.bpm, state.beatsPerMeasure);
+    if (this.onStateChange) this.onStateChange();
   }
 
   disconnectAll() {
@@ -341,7 +401,8 @@ class MetronomeSyncEngine {
       if (target > horizon) break;
       const audioTarget = audioNow + (target - masterNow) / 1000;
       if (audioTarget >= audioNow - 0.02) {
-        this.audio.scheduleBeat(audioTarget, this.nextBeatNumber % this.beatsPerMeasure === 0);
+        const beatIndex = this.nextBeatNumber % this.beatsPerMeasure;
+        this.audio.scheduleBeat(audioTarget, this.accentPattern[beatIndex] || (beatIndex === 0 ? 'accent' : 'normal'));
       }
       this.nextBeatNumber += 1;
     }

@@ -6,6 +6,7 @@ class MetronomeAudioEngine {
     this.audioCtx = null;
     this.soundType = 'synth'; // 'synth', 'woodblock', 'rimshot'
     this.volume = 0.9;
+    this.beatGain = 1;
     this.isMuted = false;
     this.isUnlocked = false;
   }
@@ -61,8 +62,12 @@ class MetronomeAudioEngine {
    * @param {number} time - AudioContext timestamp (seconds)
    * @param {boolean} isAccent - Whether this is Beat 1
    */
-  scheduleBeat(time, isAccent = false) {
+  scheduleBeat(time, accent = false) {
     if (!this.audioCtx || this.isMuted) return;
+    if (accent === 'muted') return;
+    if ((this.soundType === 'voice_en' || this.soundType === 'voice_zh') && 'speechSynthesis' in window) return;
+    const isAccent = accent === true || accent === 'accent';
+    this.beatGain = accent === 'soft' ? 0.38 : 1;
     if (this.audioCtx.state === 'suspended') {
       this.audioCtx.resume();
     }
@@ -83,6 +88,18 @@ class MetronomeAudioEngine {
     }
   }
 
+  speakCount(beat) {
+    if (this.isMuted || !('speechSynthesis' in window)) return;
+    const counts = this.soundType === 'voice_zh' ? ['一', '二', '三', '四'] : ['one', 'two', 'three', 'four'];
+    const utterance = new SpeechSynthesisUtterance(counts[(beat - 1) % 4]);
+    utterance.lang = this.soundType === 'voice_zh' ? 'zh-TW' : 'en-US';
+    utterance.rate = Math.min(2, Math.max(0.8, this.soundType === 'voice_zh' ? 1.65 : 1.8));
+    utterance.pitch = beat === 1 ? 1.2 : 1;
+    utterance.volume = this.volume;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }
+
   // Clean Electronic Metronome Beep
   playSynthClick(time, isAccent) {
     const osc = this.audioCtx.createOscillator();
@@ -91,7 +108,7 @@ class MetronomeAudioEngine {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(isAccent ? 1760 : 880, time); // A6 or A5
 
-    const baseVol = isAccent ? this.volume : this.volume * 0.7;
+    const baseVol = isAccent ? this.volume : this.volume * this.beatGain * 0.7;
     gain.gain.setValueAtTime(0.001, time);
     gain.gain.exponentialRampToValueAtTime(baseVol, time + 0.002);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + (isAccent ? 0.08 : 0.05));
@@ -118,7 +135,7 @@ class MetronomeAudioEngine {
     filter.frequency.setValueAtTime(freq, time);
     filter.Q.setValueAtTime(6, time);
 
-    const baseVol = isAccent ? this.volume * 1.2 : this.volume * 0.9;
+    const baseVol = isAccent ? this.volume * this.beatGain * 1.2 : this.volume * this.beatGain * 0.9;
     gain.gain.setValueAtTime(0.001, time);
     gain.gain.linearRampToValueAtTime(baseVol, time + 0.001);
     gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.06);
@@ -149,7 +166,7 @@ class MetronomeAudioEngine {
     noiseFilter.frequency.setValueAtTime(isAccent ? 2000 : 1500, time);
 
     const noiseGain = this.audioCtx.createGain();
-    noiseGain.gain.setValueAtTime(this.volume * (isAccent ? 0.8 : 0.5), time);
+    noiseGain.gain.setValueAtTime(this.volume * this.beatGain * (isAccent ? 0.8 : 0.5), time);
     noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.03);
 
     noise.connect(noiseFilter);
@@ -162,7 +179,7 @@ class MetronomeAudioEngine {
     osc.type = 'square';
     osc.frequency.setValueAtTime(isAccent ? 1400 : 1000, time);
 
-    oscGain.gain.setValueAtTime(this.volume * (isAccent ? 0.6 : 0.4), time);
+    oscGain.gain.setValueAtTime(this.volume * this.beatGain * (isAccent ? 0.6 : 0.4), time);
     oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
 
     osc.connect(oscGain);
