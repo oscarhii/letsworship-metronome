@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let cameraStream = null;
   let scanFrame = null;
   let expectedCode = null;
+  let applyingPairingCode = false;
   let qrCycleTimer = null;
   let scannedQrParts = new Map();
 
@@ -142,11 +143,12 @@ document.addEventListener('DOMContentLoaded', () => {
     applyRoleUi();
   };
   sync.onPeerState = (state) => {
-    if (!modal.classList.contains('open')) return;
     const labels = uiLanguage === 'zh'
       ? { checking: '正在尋找裝置連線路徑…', connecting: '正在建立直接連線…', connected: '裝置已連線。', completed: '裝置已連線。', disconnected: '連線暫時中斷，正在恢復…', failed: '無法建立連線，請確認兩台裝置皆有 Wi-Fi／網路後建立新邀請。', closed: '連線已關閉。' }
       : { checking: 'Finding a route to the device…', connecting: 'Opening the direct connection…', connected: 'Device connected.', completed: 'Device connected.', disconnected: 'Connection interrupted; recovering…', failed: 'Could not connect. Check Wi-Fi/network on both devices and create a new invitation.', closed: 'Connection closed.' };
-    if (labels[state]) pairingStatus.textContent = labels[state];
+    if (!labels[state]) return;
+    pairingStatus.textContent = labels[state];
+    if (sync.role === 'guest' && !['connected', 'completed'].includes(state)) statusText.textContent = labels[state];
   };
 
   function applyRoleUi(){
@@ -290,12 +292,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function applyCode(raw) {
-    if (!raw || !expectedCode) return;
-    stopScanner();
+    if (!raw || !expectedCode || applyingPairingCode) return;
+    applyingPairingCode = true;
+    const applyingKind = expectedCode;
+    // Keep capture active while Safari creates its answer. On iPhone, ending
+    // capture first can cause WebKit to filter the usable ICE candidates again.
+    if (applyingKind !== 'offer') stopScanner();
     pairingStatus.textContent = 'Applying pairing data...';
     try {
-      if (expectedCode === 'offer') {
+      if (applyingKind === 'offer') {
         const answer = await sync.acceptOffer(raw);
+        stopScanner();
         codeInput.value = answer;
         renderQr(answer);
         expectedCode = null;
@@ -314,8 +321,11 @@ document.addEventListener('DOMContentLoaded', () => {
         pairingStatus.textContent = 'Response accepted. Waiting for the direct connection...';
       }
     } catch (error) {
+      stopScanner();
       pairingStatus.textContent = error.message;
       if (expectedCode) await startScanner();
+    } finally {
+      applyingPairingCode = false;
     }
   }
 
