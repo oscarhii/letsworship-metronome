@@ -177,9 +177,12 @@ class MetronomeSyncEngine {
   configureHostChannel(exchangeId, pc, channel) {
     channel.onopen = () => {
       const pending = this.pendingPeers.get(exchangeId);
-      const id = (pending && pending.guestId) || exchangeId;
+      const guestId = pending && pending.guestId;
       this.pendingPeers.delete(exchangeId);
-      this.hostPeers.set(id, { pc, channel });
+      // The exchange is the connection identity. A persisted deviceId can be
+      // duplicated when Apple restores or migrates website data to another
+      // device, so it must never be used as the Map key.
+      this.hostPeers.set(exchangeId, { pc, channel, guestId });
       this.send(channel, { type: 'STATE', payload: this.snapshot() });
       this.notifyConnection();
     };

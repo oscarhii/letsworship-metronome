@@ -28,6 +28,9 @@ if (/mqtt|broker\.emqx|WebSocket\(/i.test(syncSource + html + sw)) {
 if (!syncSource.includes('stun:') || /turns?:/i.test(syncSource)) {
   throw new Error('WebRTC must use discovery-only STUN without a TURN relay.');
 }
+if (!syncSource.includes("this.hostPeers.set(exchangeId, { pc, channel, guestId })")) {
+  throw new Error("Host connections must be keyed by exchangeId so restored device IDs cannot collide.");
+}
 if (!html.includes('./js/jsQR.js')) throw new Error('Offline QR scanner is not loaded.');
 if (!sw.includes('./js/jsQR.js')) throw new Error('Offline QR scanner is not cached.');
 if (!html.includes('./js/pako.min.js')) throw new Error('Pairing compressor is not loaded.');
