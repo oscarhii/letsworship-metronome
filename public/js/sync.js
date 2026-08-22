@@ -1,7 +1,6 @@
 /**
  * Offline WebRTC sync. Pairing data is exchanged by QR/copy-paste and
- * STUN only helps browsers discover a compatible peer-to-peer route. No TURN
- * relay is used, so beat traffic is never forwarded through a media server.
+ * Pairing uses local ICE candidates only, so beat traffic stays on the local network.
  */
 class MetronomeSyncEngine {
   constructor(audio) {
@@ -59,13 +58,7 @@ class MetronomeSyncEngine {
 
   makePeer() {
     if (!window.RTCPeerConnection) throw new Error('This browser does not support WebRTC.');
-    return new RTCPeerConnection({
-      iceServers: [
-        { urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }
-      ],
-      iceCandidatePoolSize: 4,
-      bundlePolicy: 'max-bundle'
-    });
+    return new RTCPeerConnection({ iceServers: [], iceCandidatePoolSize: 4, bundlePolicy: 'max-bundle' });
   }
 
   static waitForIce(pc) {
@@ -81,7 +74,7 @@ class MetronomeSyncEngine {
       setTimeout(() => {
         pc.removeEventListener('icegatheringstatechange', check);
         resolve();
-      }, 30000);
+      }, 10000);
     });
   }
 

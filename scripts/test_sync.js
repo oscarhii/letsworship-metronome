@@ -25,9 +25,7 @@ const sw = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 if (/mqtt|broker\.emqx|WebSocket\(/i.test(syncSource + html + sw)) {
   throw new Error('Cloud/WebSocket transport is still referenced by the PWA.');
 }
-if (!syncSource.includes('stun:') || /turns?:/i.test(syncSource)) {
-  throw new Error('WebRTC must use discovery-only STUN without a TURN relay.');
-}
+if (!syncSource.includes('iceServers: []')) throw new Error('WebRTC is not restricted to LAN ICE candidates.');
 if (!syncSource.includes("this.hostPeers.set(exchangeId, { pc, channel, guestId })")) {
   throw new Error("Host connections must be keyed by exchangeId so restored device IDs cannot collide.");
 }
