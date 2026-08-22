@@ -1379,6 +1379,7 @@ html body #worship-panel>.worship-tabs>button{height:100%!important;align-self:s
 .modal-dialog button:hover,.modal-dialog button:focus-visible{background:#ead8aa!important;border-color:#9e7d2e!important;outline:2px solid #16a9bd!important;outline-offset:1px}
 .modal-dialog #btn-create-room,.modal-dialog #btn-apply-code,.modal-dialog #btn-scan-response{background:#19c4d4!important;color:#102b32!important;border-color:#0d9baa!important}
 .modal-dialog #btn-close-qr{background:#263247!important;color:#fffaf0!important;border-color:#263247!important}
+.modal-dialog #btn-leave-room{background:#fff0e8!important;color:#9b2c1f!important;border-color:#e4a395!important}
 .modal-dialog #qrcode-canvas-container{background:#fff!important;border:1px solid #d1bd8b;border-radius:12px;padding:10px;width:max-content;max-width:100%;margin:12px auto}
 
 /* In full screen the song title sits below Safari's close control, above the score. */

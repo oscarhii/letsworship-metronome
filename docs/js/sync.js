@@ -34,6 +34,7 @@ class MetronomeSyncEngine {
     this.onConnectionChange = null;
     this.onAppEvent = null;
     this.appState = null;
+    this.bandState = null;
     this.followingPaused = false;
     this.pausedHostState = null;
   }
@@ -202,7 +203,7 @@ class MetronomeSyncEngine {
   snapshot() {
     return {
       isPlaying: this.isPlaying, bpm: this.bpm, beatsPerMeasure: this.beatsPerMeasure, noteValue: this.noteValue, accentPattern: this.accentPattern,
-      startMasterTime: this.startMasterTime, soundType: this.audio.soundType || 'synth', appState: this.appState
+      startMasterTime: this.startMasterTime, soundType: this.audio.soundType || 'synth', appState: this.appState, bandState: this.bandState
     };
   }
 
@@ -260,6 +261,7 @@ class MetronomeSyncEngine {
     if (state.noteValue) this.noteValue = state.noteValue;
     if (state.accentPattern) this.accentPattern = state.accentPattern;
     if (state.soundType) this.audio.setSoundType(state.soundType);
+    if (state.bandState) { this.bandState = state.bandState; if (this.onAppEvent) this.onAppEvent(state.bandState); }
     if (state.appState) { this.appState = state.appState; if (this.onAppEvent) this.onAppEvent(state.appState); }
     if (state.isPlaying && state.startMasterTime) {
       this.startPlayback(state.startMasterTime, state.bpm, state.beatsPerMeasure);
@@ -338,6 +340,7 @@ class MetronomeSyncEngine {
 
   sendAppEvent(payload) {
     if (this.role === 'guest') return false;
+    if (payload && payload.type === 'SETLIST_SYNC') this.bandState = payload;
     if (payload && (payload.type === 'SONG' || payload.type === 'SECTION')) this.appState = payload;
     this.broadcast({ type: 'EVENT', payload: { action: 'APP', payload } });
     return true;
