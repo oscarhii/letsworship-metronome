@@ -1,6 +1,7 @@
 /**
  * Offline WebRTC sync. Pairing data is exchanged by QR/copy-paste and
- * iceServers is deliberately empty, so beat traffic stays on the local LAN.
+ * STUN only helps browsers discover a compatible peer-to-peer route. No TURN
+ * relay is used, so beat traffic is never forwarded through a media server.
  */
 class MetronomeSyncEngine {
   constructor(audio) {
@@ -58,7 +59,13 @@ class MetronomeSyncEngine {
 
   makePeer() {
     if (!window.RTCPeerConnection) throw new Error('This browser does not support WebRTC.');
-    return new RTCPeerConnection({ iceServers: [], iceCandidatePoolSize: 4, bundlePolicy: 'max-bundle' });
+    return new RTCPeerConnection({
+      iceServers: [
+        { urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }
+      ],
+      iceCandidatePoolSize: 4,
+      bundlePolicy: 'max-bundle'
+    });
   }
 
   static waitForIce(pc) {
@@ -74,8 +81,15 @@ class MetronomeSyncEngine {
       setTimeout(() => {
         pc.removeEventListener('icegatheringstatechange', check);
         resolve();
-      }, 15000);
+      }, 30000);
     });
+  }
+
+  static ensureCandidates(pc) {
+    const sdp = pc.localDescription && pc.localDescription.sdp || '';
+    if (!/a=candidate:/i.test(sdp)) {
+      throw new Error('No network route was found. Keep Wi-Fi enabled and try creating a new invitation.');
+    }
   }
 
   static encodeCode(data) {
@@ -119,6 +133,7 @@ class MetronomeSyncEngine {
     this.configureHostChannel(exchangeId, pc, channel);
     await pc.setLocalDescription(await pc.createOffer());
     await MetronomeSyncEngine.waitForIce(pc);
+    MetronomeSyncEngine.ensureCandidates(pc);
     this.notifyConnection();
     return MetronomeSyncEngine.encodeCode({
       app: 'syncbeat', version: 1, kind: 'offer', exchangeId,
@@ -136,6 +151,7 @@ class MetronomeSyncEngine {
     await pc.setRemoteDescription(offer.sdp);
     await pc.setLocalDescription(await pc.createAnswer());
     await MetronomeSyncEngine.waitForIce(pc);
+    MetronomeSyncEngine.ensureCandidates(pc);
     this.notifyConnection();
     return MetronomeSyncEngine.encodeCode({
       app: 'syncbeat', version: 1, kind: 'answer', exchangeId: offer.exchangeId,
@@ -167,7 +183,11 @@ class MetronomeSyncEngine {
       this.notifyConnection();
     };
     pc.onconnectionstatechange = () => {
+      if (this.onPeerState) this.onPeerState(pc.connectionState, 'host');
       if (['failed', 'closed'].includes(pc.connectionState)) channel.close();
+    };
+    pc.oniceconnectionstatechange = () => {
+      if (this.onPeerState) this.onPeerState(pc.iceConnectionState, 'host');
     };
   }
 
@@ -177,7 +197,11 @@ class MetronomeSyncEngine {
     channel.onmessage = (event) => this.handleGuestMessage(event.data);
     channel.onclose = () => { this.stopClockSync(); this.notifyConnection(); };
     pc.onconnectionstatechange = () => {
+      if (this.onPeerState) this.onPeerState(pc.connectionState, 'guest');
       if (['failed', 'closed'].includes(pc.connectionState)) channel.close();
+    };
+    pc.oniceconnectionstatechange = () => {
+      if (this.onPeerState) this.onPeerState(pc.iceConnectionState, 'guest');
     };
   }
 
