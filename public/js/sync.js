@@ -165,6 +165,13 @@ class MetronomeSyncEngine {
     if (!peer) throw new Error('This response belongs to another or expired invitation.');
     peer.guestId = answer.guestId;
     await peer.pc.setRemoteDescription(answer.sdp);
+    if (peer.channel.readyState !== 'open') {
+      await new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('The QR exchange completed, but the direct device connection timed out.')), 25000);
+        peer.channel.addEventListener('open', () => { clearTimeout(timer); resolve(); }, { once: true });
+        peer.channel.addEventListener('close', () => { clearTimeout(timer); reject(new Error('The direct device connection closed before pairing completed.')); }, { once: true });
+      });
+    }
   }
 
   configureHostChannel(exchangeId, pc, channel) {
