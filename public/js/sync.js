@@ -57,7 +57,7 @@ class MetronomeSyncEngine {
 
   makePeer() {
     if (!window.RTCPeerConnection) throw new Error('This browser does not support WebRTC.');
-    return new RTCPeerConnection({ iceServers: [] });
+    return new RTCPeerConnection({ iceServers: [], iceCandidatePoolSize: 4, bundlePolicy: 'max-bundle' });
   }
 
   static waitForIce(pc) {
@@ -73,7 +73,7 @@ class MetronomeSyncEngine {
       setTimeout(() => {
         pc.removeEventListener('icegatheringstatechange', check);
         resolve();
-      }, 5000);
+      }, 15000);
     });
   }
 
@@ -151,6 +151,7 @@ class MetronomeSyncEngine {
   }
 
   configureHostChannel(exchangeId, pc, channel) {
+    let disconnectTimer = null;
     channel.onopen = () => {
       const pending = this.pendingPeers.get(exchangeId);
       const id = (pending && pending.guestId) || exchangeId;
@@ -161,22 +162,32 @@ class MetronomeSyncEngine {
     };
     channel.onmessage = (event) => this.handleHostMessage(channel, event.data);
     channel.onclose = () => {
+      clearTimeout(disconnectTimer);
       for (const [id, peer] of this.hostPeers) if (peer.channel === channel) this.hostPeers.delete(id);
       this.pendingPeers.delete(exchangeId);
       this.notifyConnection();
     };
     pc.onconnectionstatechange = () => {
-      if (['failed', 'closed', 'disconnected'].includes(pc.connectionState)) channel.close();
+      clearTimeout(disconnectTimer);
+      if (['failed', 'closed'].includes(pc.connectionState)) channel.close();
+      else if (pc.connectionState === 'disconnected') disconnectTimer = setTimeout(() => {
+        if (pc.connectionState === 'disconnected') channel.close();
+      }, 10000);
     };
   }
 
   configureGuestChannel(pc, channel) {
+    let disconnectTimer = null;
     this.hostPeer = { pc, channel };
     channel.onopen = () => { this.startClockSync(); this.notifyConnection(); };
     channel.onmessage = (event) => this.handleGuestMessage(event.data);
-    channel.onclose = () => { this.stopClockSync(); this.notifyConnection(); };
+    channel.onclose = () => { clearTimeout(disconnectTimer); this.stopClockSync(); this.notifyConnection(); };
     pc.onconnectionstatechange = () => {
-      if (['failed', 'closed', 'disconnected'].includes(pc.connectionState)) channel.close();
+      clearTimeout(disconnectTimer);
+      if (['failed', 'closed'].includes(pc.connectionState)) channel.close();
+      else if (pc.connectionState === 'disconnected') disconnectTimer = setTimeout(() => {
+        if (pc.connectionState === 'disconnected') channel.close();
+      }, 10000);
     };
   }
 
