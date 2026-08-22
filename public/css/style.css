@@ -1381,6 +1381,7 @@ html body #worship-panel>.worship-tabs>button{height:100%!important;align-self:s
 .modal-dialog #btn-close-qr{background:#263247!important;color:#fffaf0!important;border-color:#263247!important}
 .modal-dialog #btn-leave-room{background:#fff0e8!important;color:#9b2c1f!important;border-color:#e4a395!important}
 .modal-dialog #qrcode-canvas-container{background:#fff!important;border:1px solid #d1bd8b;border-radius:12px;padding:10px;width:max-content;max-width:100%;margin:12px auto}
+.modal-dialog #qrcode-canvas-container canvas,.modal-dialog #qrcode-canvas-container img{display:block;max-width:min(288px,72vw)!important;height:auto!important;margin:auto}.modal-dialog .qr-progress{display:block;margin-top:7px;color:#4f5b70;font-size:10px;font-weight:850;text-align:center}
 
 /* In full screen the song title sits below Safari's close control, above the score. */
 .score-panel:fullscreen .score-hud,.score-panel.score-fullscreen-fallback .score-hud{position:relative!important;min-height:86px!important;align-items:start!important}

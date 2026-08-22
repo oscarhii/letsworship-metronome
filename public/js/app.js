@@ -44,6 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let cameraStream = null;
   let scanFrame = null;
   let expectedCode = null;
+  let qrCycleTimer = null;
+  let scannedQrParts = new Map();
 
   const urlParams = new URLSearchParams(location.search);
   const initialRoom = urlParams.get('room') || 'MAIN';
@@ -213,15 +215,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function show(node, visible) { node.classList.toggle('pairing-hidden', !visible); }
   function renderQr(code) {
+    clearInterval(qrCycleTimer);
     qrContainer.innerHTML = '';
     show(qrFrame, true);
-    new QRCode(qrContainer, {
-      text: code, width: 220, height: 220,
-      colorDark: '#0a0e1a', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.L
-    });
+    let hash=0;for(let i=0;i<code.length;i+=1)hash=(hash*31+code.charCodeAt(i))>>>0;
+    const size=420,rawParts=[];for(let offset=0;offset<code.length;offset+=size)rawParts.push(code.slice(offset,offset+size));
+    const session=hash.toString(36),parts=rawParts.map((part,index)=>'SBP1|'+session+'|'+index+'|'+rawParts.length+'|'+part);
+    let index=0;const paint=()=>{qrContainer.innerHTML='';new QRCode(qrContainer,{text:parts[index],width:288,height:288,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});if(parts.length>1){const label=document.createElement('small');label.className='qr-progress';label.textContent=(uiLanguage==='zh'?'自動分段 QR ':'Auto QR part ')+(index+1)+' / '+parts.length;qrContainer.appendChild(label);}index=(index+1)%parts.length;};paint();if(parts.length>1)qrCycleTimer=setInterval(paint,950);
+  }
+
+  function collectScannedQr(value){
+    if(!value.startsWith('SBP1|'))return value;
+    const pieces=value.split('|'),session=pieces[1],index=+pieces[2],total=+pieces[3],chunk=pieces.slice(4).join('|');
+    if(!session||!Number.isInteger(index)||!Number.isInteger(total)||index<0||index>=total||!chunk)return null;
+    let record=scannedQrParts.get(session);if(!record||record.total!==total){record={total,parts:new Map()};scannedQrParts.set(session,record);}record.parts.set(index,chunk);
+    pairingStatus.textContent=(uiLanguage==='zh'?'已掃描 QR 片段 ':'QR parts scanned ')+record.parts.size+' / '+total;
+    if(record.parts.size<total)return null;const result=Array.from({length:total},(_,partIndex)=>record.parts.get(partIndex)||'').join('');scannedQrParts.delete(session);return result;
   }
 
   function resetPairingView() {
+    clearInterval(qrCycleTimer);qrCycleTimer=null;scannedQrParts.clear();
     stopScanner();
     pairingActions.classList.toggle('pairing-hidden',sync.role!=='standalone');
     show(qrFrame, false);
@@ -284,6 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pairingStatus.textContent = 'Response ready.';
       } else {
         await sync.acceptAnswer(raw);
+        clearInterval(qrCycleTimer);qrCycleTimer=null;
         expectedCode = null;
         show(scanResponseButton, false);
         show(scannerBox, false);
@@ -326,7 +340,7 @@ document.addEventListener('DOMContentLoaded', () => {
       context.drawImage(video, 0, 0);
       const image = context.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
       const result = window.jsQR && window.jsQR(image.data, image.width, image.height, { inversionAttempts: 'dontInvert' });
-      if (result && result.data) { applyCode(result.data); return; }
+      if (result && result.data) {const complete=collectScannedQr(result.data);if(complete){applyCode(complete);return;}}
     }
     scanFrame = requestAnimationFrame(scanLoop);
   }
@@ -361,9 +375,9 @@ document.addEventListener('DOMContentLoaded', () => {
     try { codeInput.value = await navigator.clipboard.readText(); pairingStatus.textContent = 'Code pasted. Tap Use code.'; }
     catch (_) { pairingStatus.textContent = 'Paste permission denied. Long-press the text box to paste.'; }
   };
-  el('btn-close-qr').onclick = () => { stopScanner(); modal.classList.remove('open'); };
+  el('btn-close-qr').onclick = () => { stopScanner();clearInterval(qrCycleTimer);qrCycleTimer=null;modal.classList.remove('open'); };
   modal.onclick = (event) => {
-    if (event.target === modal) { stopScanner(); modal.classList.remove('open'); }
+    if (event.target === modal) { stopScanner();clearInterval(qrCycleTimer);qrCycleTimer=null;modal.classList.remove('open'); }
   };
 
   // Practice and worship features ported from the Android app.
