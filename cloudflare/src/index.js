@@ -27,6 +27,12 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     const url = new URL(request.url);
 
+    if (request.method === 'GET' && url.pathname === '/') {
+      return new Response(`<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content=width=device-width><title>LetsWorship Sync</title><style>body{font:16px system-ui;background:#fffaf0;color:#263247;display:grid;place-items:center;min-height:100vh;margin:0}.card{max-width:520px;padding:28px;border:1px solid #dec98f;border-radius:20px;background:white;box-shadow:0 12px 36px #6e5a2520}b{color:#078ca0}a{color:#078ca0}</style><main class=card><h1>LetsWorship Sync</h1><p><b>Service online</b></p><p>This address runs the room and reconnection service. Open the worship app to create or join a room.</p><p><a href=https://oscarhii.github.io/letsworship-metronome/>Open LetsWorship Metronome</a></p></main></html>`, {
+        headers: { ...cors, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
+      });
+    }
+
     if (request.method === 'GET' && url.pathname === '/health') {
       return json({ ok: true, service: 'letsworship-sync' });
     }
