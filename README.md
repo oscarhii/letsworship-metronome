@@ -1,9 +1,20 @@
-# SyncBeat Offline PWA
+# SyncBeat Worship PWA
 
-SyncBeat is an installable metronome for iOS and Android. Devices synchronize
-directly over the same Wi-Fi network or phone hotspot using WebRTC data
-channels. Beat events do not use MQTT, a cloud sync service, a LAN computer, or
-a Node.js WebSocket server.
+SyncBeat is an installable metronome for iOS and Android. Its primary sync
+transport uses reconnectable Cloudflare Durable Object rooms. Each device
+schedules beats locally from synchronized timestamps. The original same-LAN
+WebRTC pairing remains available as an offline fallback.
+
+## Reconnectable rooms
+
+1. The Host chooses **Create Host room** and receives a six-character code.
+2. Followers scan the QR once or enter that room code.
+3. Rooms remain joinable for 12 hours. A reconnecting device restores its role
+   and receives the Host's latest metronome, song, section, cue and setlist state.
+4. Only the Host can broadcast control events. Followers may pause their own
+   beat locally and resume following later.
+
+Room service: `https://letsworship-sync.oscarhiishanmin26.workers.dev`
 
 ## Install once, use offline
 
