@@ -38,14 +38,28 @@ async function take(client, type, timeout = 3000) {
   const host = await openSocket(wsBase + '?token=' + room.hostToken + '&device=HOST');
   const followerA = await openSocket(wsBase + '?token=' + room.joinToken + '&device=A');
   const followerB = await openSocket(wsBase + '?token=' + room.joinToken + '&device=B');
-  await take(host, 'WELCOME');
-  await take(followerA, 'WELCOME');
-  await take(followerB, 'WELCOME');
+  const hostWelcome = await take(host, 'WELCOME');
+  const followerAWelcome = await take(followerA, 'WELCOME');
+  const followerBWelcome = await take(followerB, 'WELCOME');
+
+  host.socket.send(JSON.stringify({ type: 'SIGNAL', target: followerAWelcome.peerId, payload: { kind: 'offer', sdp: { type: 'offer', sdp: 'test-offer' } } }));
+  const offer = await take(followerA, 'SIGNAL');
+  assert.equal(offer.from, hostWelcome.peerId);
+  assert.equal(offer.payload.kind, 'offer');
+  followerA.socket.send(JSON.stringify({ type: 'SIGNAL', target: hostWelcome.peerId, payload: { kind: 'answer', sdp: { type: 'answer', sdp: 'test-answer' } } }));
+  const answer = await take(host, 'SIGNAL');
+  assert.equal(answer.from, followerAWelcome.peerId);
+  assert.equal(answer.payload.kind, 'answer');
 
   const state = { bpm: 128, beatsPerMeasure: 4, isPlaying: false };
   host.socket.send(JSON.stringify({ type: 'STATE', payload: state }));
   assert.deepEqual((await take(followerA, 'STATE')).payload, state);
   assert.deepEqual((await take(followerB, 'STATE')).payload, state);
+
+  host.socket.send(JSON.stringify({ type: 'EVENT', payload: { action: 'TEMPO', bpm: 132 }, excludePeerIds: [followerAWelcome.peerId] }));
+  assert.equal((await take(followerB, 'EVENT')).payload.bpm, 132);
+  await wait(150);
+  assert.equal(followerA.messages.some(message => message.type === 'EVENT'), false);
 
   followerA.socket.send(JSON.stringify({ type: 'EVENT', payload: { action: 'STOP' } }));
   await wait(150);
@@ -63,5 +77,5 @@ async function take(client, type, timeout = 3000) {
   console.log('Cloud room multi-device checks passed.');
 })().catch(error => {
   console.error(error);
-  process.exitCode = 1;
+  process.exit(1);
 });

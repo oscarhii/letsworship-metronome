@@ -29,6 +29,9 @@ if (!syncSource.includes('iceServers: []')) throw new Error('WebRTC is not restr
 if (!syncSource.includes('createCloudRoom()') || !syncSource.includes('restoreCloudRoom()')) {
   throw new Error('Reconnectable Cloudflare room transport is missing.');
 }
+if (!syncSource.includes('startDirectPeer(peerId)') || !syncSource.includes('excludePeerIds')) {
+  throw new Error('WebRTC-first hybrid transport or cloud fallback de-duplication is missing.');
+}
 if (!html.includes('./js/jsQR.js')) throw new Error('Offline QR scanner is not loaded.');
 if (!sw.includes('./js/jsQR.js')) throw new Error('Offline QR scanner is not cached.');
 if (!html.includes('./js/pako.min.js')) throw new Error('Pairing compressor is not loaded.');

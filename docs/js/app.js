@@ -138,11 +138,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
   sync.onStateChange = updateUI;
-  sync.onConnectionChange = (connected, count, rtt, role) => {
+  sync.onConnectionChange = (connected, count, rtt, role, transport) => {
     statusPill.classList.toggle('connected', connected);
-    if (role === 'host') statusText.textContent = (uiLanguage==='zh'?'主控 Host':'Host') + ' · ' + count + (uiLanguage==='zh'?' 台裝置':' devices');
-    else if (role === 'guest' && connected) statusText.textContent = (uiLanguage==='zh'?'跟隨者':'Follower') + ' · ' + (rtt ? rtt + 'ms' : (uiLanguage==='zh'?'同步中':'syncing'));
-    else if (role === 'guest') statusText.textContent = 'Pairing...';
+    const route = transport === 'direct' ? (uiLanguage === 'zh' ? '區網直連' : 'LAN Direct')
+      : transport === 'mixed' ? (uiLanguage === 'zh' ? '混合連線' : 'Mixed')
+      : transport === 'cloud' ? (uiLanguage === 'zh' ? '雲端備援' : 'Cloud Backup') : '';
+    if (role === 'host') statusText.textContent = 'Host · ' + count + (uiLanguage === 'zh' ? ' 台' : ' devices') + (route ? ' · ' + route : '');
+    else if (role === 'guest' && connected) statusText.textContent = 'Follower · ' + (route || (rtt ? rtt + 'ms' : (uiLanguage === 'zh' ? '同步中' : 'syncing')));
+    else if (role === 'guest') statusText.textContent = uiLanguage === 'zh' ? '重新連線中…' : 'Reconnecting…';
     else statusText.textContent = 'Standalone';
     applyRoleUi();
   };

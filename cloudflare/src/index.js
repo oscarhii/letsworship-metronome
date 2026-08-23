@@ -102,12 +102,19 @@ export class SyncRoom extends DurableObject {
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     const deviceId = (url.searchParams.get('device') || crypto.randomUUID()).slice(0, 80);
+    const peerId = crypto.randomUUID();
     this.ctx.acceptWebSocket(server, [role]);
-    server.serializeAttachment({ role, deviceId, joinedAt: Date.now() });
-    server.send(JSON.stringify({ type: 'WELCOME', role, room: config.code, serverTime: Date.now() }));
+    server.serializeAttachment({ role, deviceId, peerId, joinedAt: Date.now() });
+    server.send(JSON.stringify({ type: 'WELCOME', role, room: config.code, peerId, serverTime: Date.now() }));
 
     const state = await this.ctx.storage.get('state');
     if (role === 'follower' && state) server.send(JSON.stringify({ type: 'STATE', payload: state, serverTime: Date.now() }));
+    if (role === 'host') {
+      const followers = this.ctx.getWebSockets('follower').map(socket => socket.deserializeAttachment()).filter(Boolean).map(peer => ({ peerId: peer.peerId, deviceId: peer.deviceId }));
+      server.send(JSON.stringify({ type: 'PEERS', followers }));
+    } else {
+      this.broadcastToRole('host', { type: 'PEER_JOINED', peerId, deviceId });
+    }
     this.broadcastPresence();
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -127,6 +134,18 @@ export class SyncRoom extends DurableObject {
       if (state) ws.send(JSON.stringify({ type: 'STATE', payload: state, serverTime: Date.now() }));
       return;
     }
+    if (message.type === 'SIGNAL' && message.target && message.payload) {
+      const target = this.findPeer(message.target);
+      if (!target) return;
+      const targetRole = (target.deserializeAttachment() || {}).role;
+      const allowed = (attachment.role === 'host' && targetRole === 'follower') || (attachment.role === 'follower' && targetRole === 'host');
+      if (allowed) target.send(JSON.stringify({ type: 'SIGNAL', from: attachment.peerId, payload: message.payload }));
+      return;
+    }
+    if (message.type === 'DIRECT_REQUEST' && attachment.role === 'follower') {
+      this.broadcastToRole('host', { type: 'DIRECT_REQUEST', peerId: attachment.peerId });
+      return;
+    }
     if (attachment.role !== 'host') return;
 
     if (message.type === 'STATE') {
@@ -135,12 +154,14 @@ export class SyncRoom extends DurableObject {
     } else if (message.type === 'STORE_STATE') {
       await this.ctx.storage.put('state', message.payload);
     } else if (message.type === 'EVENT') {
-      this.broadcast({ type: 'EVENT', payload: message.payload, serverTime: Date.now() }, ws);
+      this.broadcast({ type: 'EVENT', payload: message.payload, serverTime: Date.now() }, ws, message.excludePeerIds || []);
     }
   }
 
   webSocketClose(ws, code, reason) {
+    const attachment = ws.deserializeAttachment() || {};
     ws.close(code, reason);
+    if (attachment.peerId) this.broadcast({ type: 'PEER_LEFT', peerId: attachment.peerId });
     this.broadcastPresence();
   }
 
@@ -148,10 +169,20 @@ export class SyncRoom extends DurableObject {
     this.broadcastPresence();
   }
 
-  broadcast(message, except = null) {
+  findPeer(peerId) {
+    return this.ctx.getWebSockets().find(socket => (socket.deserializeAttachment() || {}).peerId === peerId);
+  }
+
+  broadcastToRole(role, message) {
+    const encoded = JSON.stringify(message);
+    for (const socket of this.ctx.getWebSockets(role)) if (socket.readyState === WebSocket.OPEN) socket.send(encoded);
+  }
+
+  broadcast(message, except = null, excludedPeerIds = []) {
     const encoded = JSON.stringify(message);
     for (const socket of this.ctx.getWebSockets()) {
-      if (socket !== except && socket.readyState === WebSocket.OPEN) socket.send(encoded);
+      const peerId = (socket.deserializeAttachment() || {}).peerId;
+      if (socket !== except && !excludedPeerIds.includes(peerId) && socket.readyState === WebSocket.OPEN) socket.send(encoded);
     }
   }
 

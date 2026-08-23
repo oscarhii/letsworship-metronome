@@ -1,9 +1,9 @@
 # SyncBeat Worship PWA
 
-SyncBeat is an installable metronome for iOS and Android. Its primary sync
-transport uses reconnectable Cloudflare Durable Object rooms. Each device
-schedules beats locally from synchronized timestamps. The original same-LAN
-WebRTC pairing remains available as an offline fallback.
+SyncBeat is an installable metronome for iOS and Android. Cloudflare Durable
+Object rooms keep identity, signaling and reconnection stable, while beat and
+live-control events prefer a same-LAN WebRTC DataChannel. Cloud WebSocket relay
+is used only for devices that cannot currently establish the direct route.
 
 ## Reconnectable rooms
 

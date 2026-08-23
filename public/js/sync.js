@@ -43,6 +43,9 @@ class MetronomeSyncEngine {
     this.cloudReconnectTimer = null;
     this.cloudReconnectAttempt = 0;
     this.cloudShouldReconnect = false;
+    this.cloudPeerId = null;
+    this.cloudKnownPeers = new Set();
+    this.directRetryTimers = new Map();
   }
 
   init(roomId) {
@@ -58,8 +61,13 @@ class MetronomeSyncEngine {
     const cloudOpen = this.cloudSocket && this.cloudSocket.readyState === WebSocket.OPEN;
     if (!cloudOpen) this.deviceCount = this.role === 'host' ? this.hostPeers.size + 1 : (guestOpen ? 2 : 1);
     this.isConnected = this.role !== 'guest' || Boolean(guestOpen || cloudOpen);
+    const directCount = this.role === 'host' ? this.hostPeers.size : (guestOpen ? 1 : 0);
+    if (this.role === 'host' && directCount && cloudOpen && directCount < this.deviceCount - 1) this.transportMode = 'mixed';
+    else if (directCount) this.transportMode = 'direct';
+    else if (cloudOpen) this.transportMode = 'cloud';
+    else this.transportMode = 'offline';
     if (this.onConnectionChange) {
-      this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt, this.role);
+      this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt, this.role, this.transportMode);
     }
   }
 
@@ -172,6 +180,7 @@ class MetronomeSyncEngine {
       for (const [id, peer] of this.hostPeers) if (peer.channel === channel) this.hostPeers.delete(id);
       this.pendingPeers.delete(exchangeId);
       this.notifyConnection();
+      if (this.cloudKnownPeers.has(exchangeId)) this.scheduleDirectRetry(exchangeId);
     };
     pc.onconnectionstatechange = () => {
       if (['failed', 'closed'].includes(pc.connectionState)) channel.close();
@@ -182,7 +191,12 @@ class MetronomeSyncEngine {
     this.hostPeer = { pc, channel };
     channel.onopen = () => { this.startClockSync(); this.notifyConnection(); };
     channel.onmessage = (event) => this.handleGuestMessage(event.data);
-    channel.onclose = () => { this.stopClockSync(); this.notifyConnection(); };
+    channel.onclose = () => {
+      if (this.cloudSocket && this.cloudSocket.readyState === WebSocket.OPEN) this.startClockSync();
+      else this.stopClockSync();
+      this.notifyConnection();
+      if (this.cloudSocket && this.cloudSocket.readyState === WebSocket.OPEN) this.sendCloud({ type: 'DIRECT_REQUEST' });
+    };
     pc.onconnectionstatechange = () => {
       if (['failed', 'closed'].includes(pc.connectionState)) channel.close();
     };
@@ -195,9 +209,69 @@ class MetronomeSyncEngine {
   broadcast(message) {
     for (const peer of this.hostPeers.values()) this.send(peer.channel, message);
     if (this.cloudSocket && this.cloudSocket.readyState === WebSocket.OPEN && this.role === 'host') {
-      this.cloudSocket.send(JSON.stringify(message));
+      const cloudMessage = Object.assign({}, message, { excludePeerIds: Array.from(this.hostPeers.keys()) });
+      this.cloudSocket.send(JSON.stringify(cloudMessage));
       if (message.type === 'EVENT') this.cloudSocket.send(JSON.stringify({ type: 'STORE_STATE', payload: this.snapshot() }));
     }
+  }
+
+  sendCloud(message) {
+    if (this.cloudSocket && this.cloudSocket.readyState === WebSocket.OPEN) this.cloudSocket.send(JSON.stringify(message));
+  }
+
+  async startDirectPeer(peerId) {
+    if (this.role !== 'host' || !this.cloudKnownPeers.has(peerId)) return;
+    const connected = this.hostPeers.get(peerId);
+    if (connected && connected.channel.readyState === 'open') return;
+    const pending = this.pendingPeers.get(peerId);
+    if (pending && !['closed', 'failed'].includes(pending.pc.connectionState)) return;
+    if (pending) pending.pc.close();
+    const pc = this.makePeer();
+    const channel = pc.createDataChannel('syncbeat', { ordered: true });
+    this.pendingPeers.set(peerId, { pc, channel, guestId: peerId });
+    this.configureHostChannel(peerId, pc, channel);
+    try {
+      await pc.setLocalDescription(await pc.createOffer());
+      await MetronomeSyncEngine.waitForIce(pc);
+      this.sendCloud({ type: 'SIGNAL', target: peerId, payload: { kind: 'offer', sdp: pc.localDescription } });
+    } catch (_) {
+      pc.close();
+      this.pendingPeers.delete(peerId);
+      this.scheduleDirectRetry(peerId);
+    }
+  }
+
+  async handleDirectSignal(from, payload) {
+    if (!from || !payload || !payload.sdp) return;
+    if (payload.kind === 'offer' && this.role === 'guest') {
+      if (this.hostPeer) this.hostPeer.pc.close();
+      const pc = this.makePeer();
+      pc.ondatachannel = event => this.configureGuestChannel(pc, event.channel);
+      try {
+        await pc.setRemoteDescription(payload.sdp);
+        await pc.setLocalDescription(await pc.createAnswer());
+        await MetronomeSyncEngine.waitForIce(pc);
+        this.sendCloud({ type: 'SIGNAL', target: from, payload: { kind: 'answer', sdp: pc.localDescription } });
+      } catch (_) {
+        pc.close();
+        this.sendCloud({ type: 'DIRECT_REQUEST' });
+      }
+    } else if (payload.kind === 'answer' && this.role === 'host') {
+      const pending = this.pendingPeers.get(from);
+      if (pending) {
+        try { await pending.pc.setRemoteDescription(payload.sdp); }
+        catch (_) { pending.pc.close(); this.pendingPeers.delete(from); this.scheduleDirectRetry(from); }
+      }
+    }
+  }
+
+  scheduleDirectRetry(peerId) {
+    if (!peerId || !this.cloudKnownPeers.has(peerId) || this.directRetryTimers.has(peerId)) return;
+    const timer = setTimeout(() => {
+      this.directRetryTimers.delete(peerId);
+      this.startDirectPeer(peerId);
+    }, 3000);
+    this.directRetryTimers.set(peerId, timer);
   }
 
   setCloudEndpoint(endpoint) {
@@ -291,6 +365,43 @@ class MetronomeSyncEngine {
   handleCloudMessage(raw) {
     let message;
     try { message = JSON.parse(raw); } catch (_) { return; }
+    if (message.type === 'WELCOME') {
+      this.cloudPeerId = message.peerId;
+      return;
+    }
+    if (message.type === 'PEERS' && this.role === 'host') {
+      for (const peer of message.followers || []) {
+        this.cloudKnownPeers.add(peer.peerId);
+        this.startDirectPeer(peer.peerId);
+      }
+      return;
+    }
+    if (message.type === 'PEER_JOINED' && this.role === 'host') {
+      this.cloudKnownPeers.add(message.peerId);
+      this.startDirectPeer(message.peerId);
+      return;
+    }
+    if (message.type === 'PEER_LEFT') {
+      this.cloudKnownPeers.delete(message.peerId);
+      const direct = this.hostPeers.get(message.peerId);
+      const pending = this.pendingPeers.get(message.peerId);
+      if (direct) direct.pc.close();
+      if (pending) pending.pc.close();
+      this.hostPeers.delete(message.peerId);
+      this.pendingPeers.delete(message.peerId);
+      clearTimeout(this.directRetryTimers.get(message.peerId));
+      this.directRetryTimers.delete(message.peerId);
+      this.notifyConnection();
+      return;
+    }
+    if (message.type === 'DIRECT_REQUEST' && this.role === 'host') {
+      this.startDirectPeer(message.peerId);
+      return;
+    }
+    if (message.type === 'SIGNAL') {
+      this.handleDirectSignal(message.from, message.payload);
+      return;
+    }
     if (message.type === 'PRESENCE') {
       this.deviceCount = message.devices || 1;
       this.notifyConnection();
@@ -321,6 +432,7 @@ class MetronomeSyncEngine {
       this.cloudSocket.close();
     }
     this.cloudSocket = null;
+    this.cloudPeerId = null;
     if (clearSession) {
       this.cloudSession = null;
       localStorage.removeItem('syncbeat-cloud-session');
@@ -339,7 +451,7 @@ class MetronomeSyncEngine {
       const message = JSON.parse(raw);
       if (message.type === 'PING') {
         this.send(channel, { type: 'PONG', payload: {
-          clientSendTime: message.payload.clientSendTime, hostTime: Date.now()
+          clientSendTime: message.payload.clientSendTime, hostTime: this.getMasterNow()
         }});
       } else if (message.type === 'COMMAND') {
         this.applyHostCommand(message.payload);
