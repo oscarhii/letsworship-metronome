@@ -25,9 +25,7 @@ const sw = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
 if (/mqtt|broker\.emqx|WebSocket\(/i.test(syncSource + html + sw)) {
   throw new Error('Cloud/WebSocket transport is still referenced by the PWA.');
 }
-if (!syncSource.includes('stun:') || /turns?:/i.test(syncSource)) {
-  throw new Error('WebRTC must use discovery-only STUN without a TURN relay.');
-}
+if (!syncSource.includes('iceServers: []')) throw new Error('WebRTC is not restricted to LAN ICE candidates.');
 if (!html.includes('./js/jsQR.js')) throw new Error('Offline QR scanner is not loaded.');
 if (!sw.includes('./js/jsQR.js')) throw new Error('Offline QR scanner is not cached.');
 if (!html.includes('./js/pako.min.js')) throw new Error('Pairing compressor is not loaded.');

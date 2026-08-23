@@ -141,13 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
     else statusText.textContent = 'Standalone';
     applyRoleUi();
   };
-  sync.onPeerState = (state) => {
-    if (!modal.classList.contains('open')) return;
-    const labels = uiLanguage === 'zh'
-      ? { checking: '正在尋找裝置連線路徑…', connecting: '正在建立直接連線…', connected: '裝置已連線。', completed: '裝置已連線。', disconnected: '連線暫時中斷，正在恢復…', failed: '無法建立連線，請確認兩台裝置皆有 Wi-Fi／網路後建立新邀請。', closed: '連線已關閉。' }
-      : { checking: 'Finding a route to the device…', connecting: 'Opening the direct connection…', connected: 'Device connected.', completed: 'Device connected.', disconnected: 'Connection interrupted; recovering…', failed: 'Could not connect. Check Wi-Fi/network on both devices and create a new invitation.', closed: 'Connection closed.' };
-    if (labels[state]) pairingStatus.textContent = labels[state];
-  };
 
   function applyRoleUi(){
     const follower=sync.role==='guest';
