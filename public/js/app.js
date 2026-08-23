@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let applyingPairingCode = false;
   let qrCycleTimer = null;
   let scannedQrParts = new Map();
-  let pairingWatchdog = null;
 
   const urlParams = new URLSearchParams(location.search);
   const initialRoom = urlParams.get('room') || 'MAIN';
@@ -141,11 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (role === 'guest' && connected) statusText.textContent = (uiLanguage==='zh'?'跟隨者':'Follower') + ' · ' + (rtt ? rtt + 'ms' : (uiLanguage==='zh'?'同步中':'syncing'));
     else if (role === 'guest') statusText.textContent = 'Pairing...';
     else statusText.textContent = 'Standalone';
-    if (role === 'guest' && connected) {
-      clearTimeout(pairingWatchdog);
-      pairingWatchdog = null;
-      pairingStatus.textContent = uiLanguage === 'zh' ? '裝置已連線，可以關閉視窗。' : 'Device connected. You may close this window.';
-    }
     applyRoleUi();
   };
   sync.onPeerState = (state) => {
@@ -315,15 +309,6 @@ document.addEventListener('DOMContentLoaded', () => {
         show(scanResponseButton, false);
         instructions.textContent = 'Show this response QR to the host device. The connection completes when the host scans it.';
         pairingStatus.textContent = 'Response ready.';
-        statusText.textContent = uiLanguage === 'zh' ? '等待 Host 確認…' : 'Waiting for Host…';
-        clearTimeout(pairingWatchdog);
-        pairingWatchdog = setTimeout(() => {
-          if (sync.role === 'guest' && !sync.isConnected) {
-            const message = uiLanguage === 'zh' ? 'QR 交換完成，但裝置直接連線逾時。請保持此視窗開啟並重新配對。' : 'QR exchange completed, but the direct connection timed out. Keep this window open and pair again.';
-            pairingStatus.textContent = message;
-            statusText.textContent = uiLanguage === 'zh' ? '配對失敗' : 'Pairing failed';
-          }
-        }, 30000);
       } else {
         await sync.acceptAnswer(raw);
         clearInterval(qrCycleTimer);qrCycleTimer=null;
@@ -333,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         show(qrFrame, false);
         show(codeBox, false);
         show(addDeviceButton, true);
-        pairingStatus.textContent = 'Device connected. You may close this window.';
+        pairingStatus.textContent = 'Response accepted. Waiting for the direct connection...';
       }
     } catch (error) {
       stopScanner();
