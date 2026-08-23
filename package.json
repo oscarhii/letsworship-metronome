@@ -6,11 +6,17 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node scripts/test_sync.js"
+    "test": "node scripts/test_sync.js",
+    "worker:dev": "wrangler dev --config cloudflare/wrangler.toml --port 8787",
+    "worker:deploy": "wrangler deploy --config cloudflare/wrangler.toml",
+    "test:cloud": "node scripts/test_cloud_sync.js"
   },
   "dependencies": {
     "express": "^4.19.2",
     "jsqr": "^1.4.0",
     "pako": "^2.1.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.125.0"
   }
 }

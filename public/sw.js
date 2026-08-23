@@ -6,6 +6,7 @@ const ASSETS = [
   './js/qrcode.min.js',
   './js/jsQR.js',
   './js/pako.min.js',
+  './js/cloud-config.js',
   './js/audio.js',
   './js/sync.js',
   './js/app.js',

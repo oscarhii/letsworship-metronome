@@ -37,6 +37,12 @@ class MetronomeSyncEngine {
     this.bandState = null;
     this.followingPaused = false;
     this.pausedHostState = null;
+    this.cloudEndpoint = localStorage.getItem('syncbeat-cloud-endpoint') || '';
+    this.cloudSocket = null;
+    this.cloudSession = null;
+    this.cloudReconnectTimer = null;
+    this.cloudReconnectAttempt = 0;
+    this.cloudShouldReconnect = false;
   }
 
   init(roomId) {
@@ -49,8 +55,9 @@ class MetronomeSyncEngine {
 
   notifyConnection() {
     const guestOpen = this.hostPeer && this.hostPeer.channel.readyState === 'open';
-    this.deviceCount = this.role === 'host' ? this.hostPeers.size + 1 : (guestOpen ? 2 : 1);
-    this.isConnected = this.role !== 'guest' || Boolean(guestOpen);
+    const cloudOpen = this.cloudSocket && this.cloudSocket.readyState === WebSocket.OPEN;
+    if (!cloudOpen) this.deviceCount = this.role === 'host' ? this.hostPeers.size + 1 : (guestOpen ? 2 : 1);
+    this.isConnected = this.role !== 'guest' || Boolean(guestOpen || cloudOpen);
     if (this.onConnectionChange) {
       this.onConnectionChange(this.isConnected, this.deviceCount, this.rtt, this.role);
     }
@@ -187,6 +194,137 @@ class MetronomeSyncEngine {
 
   broadcast(message) {
     for (const peer of this.hostPeers.values()) this.send(peer.channel, message);
+    if (this.cloudSocket && this.cloudSocket.readyState === WebSocket.OPEN && this.role === 'host') {
+      this.cloudSocket.send(JSON.stringify(message));
+      if (message.type === 'EVENT') this.cloudSocket.send(JSON.stringify({ type: 'STORE_STATE', payload: this.snapshot() }));
+    }
+  }
+
+  setCloudEndpoint(endpoint) {
+    this.cloudEndpoint = (endpoint || '').trim().replace(/\/$/, '');
+    if (this.cloudEndpoint) localStorage.setItem('syncbeat-cloud-endpoint', this.cloudEndpoint);
+    else localStorage.removeItem('syncbeat-cloud-endpoint');
+  }
+
+  async createCloudRoom() {
+    if (!this.cloudEndpoint) throw new Error('Cloud room service is not configured.');
+    const response = await fetch(this.cloudEndpoint + '/api/rooms', { method: 'POST' });
+    if (!response.ok) throw new Error('Could not create the cloud room.');
+    const room = await response.json();
+    await this.connectCloudRoom({ code: room.code, token: room.hostToken, joinToken: room.joinToken, role: 'host' });
+    return room;
+  }
+
+  async joinCloudRoom(code, joinToken) {
+    if (!this.cloudEndpoint) throw new Error('Cloud room service is not configured.');
+    return this.connectCloudRoom({ code, token: joinToken, joinToken, role: 'guest' });
+  }
+
+  async joinCloudRoomByCode(code) {
+    if (!this.cloudEndpoint) throw new Error('Cloud room service is not configured.');
+    const normalized = String(code || '').toUpperCase().replace(/[^A-Z2-9]/g, '');
+    const response = await fetch(this.cloudEndpoint + '/api/rooms/' + encodeURIComponent(normalized) + '/join', { method: 'POST' });
+    if (!response.ok) throw new Error(response.status === 410 ? 'This room has expired.' : 'Room not found.');
+    const room = await response.json();
+    return this.joinCloudRoom(room.code, room.joinToken);
+  }
+
+  async connectCloudRoom(session) {
+    this.closeCloudSocket(false);
+    this.cloudSession = session;
+    this.cloudShouldReconnect = true;
+    this.roomId = String(session.code || '').toUpperCase();
+    this.role = session.role;
+    localStorage.setItem('syncbeat-cloud-session', JSON.stringify(session));
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const timeout = setTimeout(() => {
+        if (!settled) { settled = true; reject(new Error('Cloud room connection timed out.')); }
+      }, 12000);
+      this.openCloudSocket(() => {
+        if (!settled) { settled = true; clearTimeout(timeout); resolve(); }
+      }, error => {
+        if (!settled) { settled = true; clearTimeout(timeout); reject(error); }
+      });
+    });
+  }
+
+  restoreCloudRoom() {
+    if (!this.cloudEndpoint) return false;
+    try { this.cloudSession = JSON.parse(localStorage.getItem('syncbeat-cloud-session') || 'null'); }
+    catch (_) { this.cloudSession = null; }
+    if (!this.cloudSession) return false;
+    this.roomId = this.cloudSession.code;
+    this.role = this.cloudSession.role;
+    this.cloudShouldReconnect = true;
+    this.openCloudSocket();
+    return true;
+  }
+
+  openCloudSocket(onOpen, onError) {
+    if (!this.cloudSession || !this.cloudEndpoint || !this.cloudShouldReconnect) return;
+    clearTimeout(this.cloudReconnectTimer);
+    const wsBase = this.cloudEndpoint.replace(/^http/, 'ws');
+    const url = wsBase + '/api/rooms/' + encodeURIComponent(this.cloudSession.code) + '/websocket?token=' + encodeURIComponent(this.cloudSession.token) + '&device=' + encodeURIComponent(this.deviceId);
+    const socket = new WebSocket(url);
+    this.cloudSocket = socket;
+    socket.onopen = () => {
+      this.cloudReconnectAttempt = 0;
+      if (this.cloudSession.role === 'host') socket.send(JSON.stringify({ type: 'STATE', payload: this.snapshot() }));
+      else socket.send(JSON.stringify({ type: 'REQUEST_STATE' }));
+      this.startClockSync();
+      this.notifyConnection();
+      if (onOpen) onOpen();
+    };
+    socket.onmessage = event => this.handleCloudMessage(event.data);
+    socket.onerror = () => { if (onError) onError(new Error('Cloud room connection failed.')); };
+    socket.onclose = () => {
+      this.stopClockSync();
+      this.notifyConnection();
+      if (this.cloudShouldReconnect) {
+        const delay = Math.min(15000, 750 * Math.pow(2, this.cloudReconnectAttempt++));
+        this.cloudReconnectTimer = setTimeout(() => this.openCloudSocket(), delay);
+      }
+    };
+  }
+
+  handleCloudMessage(raw) {
+    let message;
+    try { message = JSON.parse(raw); } catch (_) { return; }
+    if (message.type === 'PRESENCE') {
+      this.deviceCount = message.devices || 1;
+      this.notifyConnection();
+      return;
+    }
+    if (message.type === 'PONG') {
+      const received = Date.now();
+      const midpoint = (message.clientTime + received) / 2;
+      this.pings.push({ rtt: received - message.clientTime, offset: message.serverTime - midpoint });
+      this.pings = this.pings.slice(-10).sort((a, b) => a.rtt - b.rtt);
+      const best = this.pings.slice(0, Math.min(5, this.pings.length));
+      this.clockOffset = best.reduce((sum, item) => sum + item.offset, 0) / best.length;
+      this.rtt = Math.round(best.reduce((sum, item) => sum + item.rtt, 0) / best.length);
+      this.notifyConnection();
+      return;
+    }
+    if (this.role !== 'guest') return;
+    if (message.type === 'STATE') this.applyState(message.payload);
+    if (message.type === 'EVENT') this.applyEvent(message.payload);
+  }
+
+  closeCloudSocket(clearSession = true) {
+    this.cloudShouldReconnect = false;
+    clearTimeout(this.cloudReconnectTimer);
+    this.cloudReconnectTimer = null;
+    if (this.cloudSocket) {
+      this.cloudSocket.onclose = null;
+      this.cloudSocket.close();
+    }
+    this.cloudSocket = null;
+    if (clearSession) {
+      this.cloudSession = null;
+      localStorage.removeItem('syncbeat-cloud-session');
+    }
   }
 
   snapshot() {
@@ -231,9 +369,13 @@ class MetronomeSyncEngine {
 
   startClockSync() {
     this.stopClockSync();
-    const ping = () => this.send(this.hostPeer && this.hostPeer.channel, {
-      type: 'PING', payload: { clientSendTime: Date.now() }
-    });
+    const ping = () => {
+      if (this.cloudSocket && this.cloudSocket.readyState === WebSocket.OPEN) {
+        this.cloudSocket.send(JSON.stringify({ type: 'PING', clientTime: Date.now() }));
+      } else {
+        this.send(this.hostPeer && this.hostPeer.channel, { type: 'PING', payload: { clientSendTime: Date.now() } });
+      }
+    };
     for (let i = 0; i < 6; i += 1) setTimeout(ping, i * 150);
     this.pingTimer = setInterval(ping, 4000);
   }
@@ -291,9 +433,9 @@ class MetronomeSyncEngine {
     if (event.action === 'START') {
       event.bpm = event.bpm || this.bpm;
       event.beatsPerMeasure = event.beatsPerMeasure || this.beatsPerMeasure;
-      event.startMasterTime = Date.now() + 700;
+      event.startMasterTime = this.getMasterNow() + 700;
     }
-    if (event.action === 'TEMPO' && this.isPlaying) event.startMasterTime = Date.now() + 500;
+    if (event.action === 'TEMPO' && this.isPlaying) event.startMasterTime = this.getMasterNow() + 500;
     this.applyEvent(event);
     this.broadcast({ type: 'EVENT', payload: event });
   }
@@ -357,6 +499,7 @@ class MetronomeSyncEngine {
 
   disconnectAll() {
     this.stopClockSync();
+    this.closeCloudSocket(true);
     for (const peer of this.hostPeers.values()) peer.pc.close();
     for (const peer of this.pendingPeers.values()) peer.pc.close();
     if (this.hostPeer) this.hostPeer.pc.close();

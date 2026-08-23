@@ -38,6 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const addDeviceButton = el('btn-add-device');
   const leaveRoomButton = el('btn-leave-room');
   const scanResponseButton = el('btn-scan-response');
+  const cloudRoomCode = el('cloud-room-code');
+  const cloudRoomInput = el('cloud-room-input');
+  const joinCodeButton = el('btn-join-code');
 
   let tapTimes = [];
   let wakeLock = null;
@@ -46,6 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let expectedCode = null;
   let qrCycleTimer = null;
   let scannedQrParts = new Map();
+  const configuredCloudEndpoint = window.SYNCBEAT_CLOUD_ENDPOINT || (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? 'http://127.0.0.1:8787' : '');
+  sync.setCloudEndpoint(configuredCloudEndpoint);
 
   const urlParams = new URLSearchParams(location.search);
   const initialRoom = urlParams.get('room') || 'MAIN';
@@ -240,6 +245,7 @@ document.addEventListener('DOMContentLoaded', () => {
     show(qrFrame, false);
     show(scannerBox, false);
     show(codeBox, false);
+    show(cloudRoomCode, false);
     show(scanResponseButton, false);
     show(addDeviceButton, sync.role==='host');
     show(leaveRoomButton, sync.role!=='standalone');
@@ -260,6 +266,22 @@ document.addEventListener('DOMContentLoaded', () => {
     show(addDeviceButton, false);
     pairingStatus.textContent = 'Creating a local invitation...';
     try {
+      if (sync.cloudEndpoint) {
+        const room = sync.cloudSession && sync.cloudSession.role === 'host'
+          ? { code: sync.cloudSession.code, joinToken: sync.cloudSession.joinToken }
+          : await sync.createCloudRoom();
+        const invitation = 'SBC1|' + sync.cloudEndpoint + '|' + room.code + '|' + room.joinToken;
+        codeInput.value = room.code;
+        renderQr(invitation);
+        expectedCode = null;
+        show(scanResponseButton, false);
+        show(codeBox, false);
+        show(addDeviceButton, true);
+        instructions.textContent = 'Room ' + room.code + ' · Followers scan once or enter this six-character code. Valid for 12 hours.';
+        pairingStatus.textContent = 'Cloud room connected.';
+        updateUI();
+        return;
+      }
       const code = await sync.createHostOffer();
       codeInput.value = code;
       renderQr(code);
@@ -275,6 +297,15 @@ document.addEventListener('DOMContentLoaded', () => {
     pairingActions.classList.add('pairing-hidden');
     show(qrFrame, false);
     show(codeBox, true);
+    if (sync.cloudEndpoint) {
+      show(cloudRoomCode, true);
+      show(codeBox, false);
+      expectedCode = 'cloud-invite';
+      instructions.textContent = 'Scan the Host QR once, or enter the six-character room code.';
+      pairingStatus.textContent = 'Camera is looking for a room invitation...';
+      await startScanner();
+      return;
+    }
     show(scanResponseButton, false);
     expectedCode = 'offer';
     instructions.textContent = 'Scan the invitation shown on the host device, or paste its pairing code.';
@@ -287,6 +318,20 @@ document.addEventListener('DOMContentLoaded', () => {
     stopScanner();
     pairingStatus.textContent = 'Applying pairing data...';
     try {
+      if (expectedCode === 'cloud-invite') {
+        const parts = raw.split('|');
+        if (parts.length !== 4 || parts[0] !== 'SBC1') throw new Error('This is not a SyncBeat cloud room invitation.');
+        sync.setCloudEndpoint(parts[1]);
+        await sync.joinCloudRoom(parts[2], parts[3]);
+        expectedCode = null;
+        show(cloudRoomCode, false);
+        show(codeBox, false);
+        show(qrFrame, false);
+        instructions.textContent = 'Connected as Follower in room ' + parts[2] + '.';
+        pairingStatus.textContent = 'Connected. This device will reconnect automatically.';
+        updateUI();
+        return;
+      }
       if (expectedCode === 'offer') {
         const answer = await sync.acceptOffer(raw);
         codeInput.value = answer;
@@ -365,6 +410,20 @@ document.addEventListener('DOMContentLoaded', () => {
     await startScanner();
   };
   addDeviceButton.onclick = createInvitation;
+  joinCodeButton.onclick = async () => {
+    const code = cloudRoomInput.value.trim().toUpperCase();
+    if (!/^[A-Z2-9]{6}$/.test(code)) { pairingStatus.textContent = 'Enter the six-character room code.'; return; }
+    stopScanner();
+    pairingStatus.textContent = 'Joining room ' + code + '...';
+    try {
+      await sync.joinCloudRoomByCode(code);
+      expectedCode = null;
+      show(cloudRoomCode, false);
+      instructions.textContent = 'Connected as Follower in room ' + code + '.';
+      pairingStatus.textContent = 'Connected. This device will reconnect automatically.';
+      updateUI();
+    } catch (error) { pairingStatus.textContent = error.message; }
+  };
   leaveRoomButton.onclick=()=>{const wasGuest=sync.role==='guest';sync.disconnectAll();resetPairingView();updateUI();pairingStatus.textContent=wasGuest?(uiLanguage==='zh'?'已解除 Follower，可建立或加入房間。':'Follower role removed. You may now create or join a room.'):(uiLanguage==='zh'?'Host 房間已結束。':'Host room closed.');};
   el('btn-apply-code').onclick = () => applyCode(codeInput.value);
   el('btn-copy-code').onclick = async () => {
@@ -545,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   sync.onStateChange=()=>{updateUI();renderWorshipFull();};
   sync.onAppEvent=payload=>{if(!payload)return;if(payload.type==='SETLIST_SYNC'&&sync.role==='guest'&&Array.isArray(payload.songs)){const localScores=new Map(songs.map(song=>[song.id,{scoreName:song.scoreName,scorePages:song.scorePages}]));songs=payload.songs.map(song=>Object.assign({},song,localScores.get(song.id)||{}));setlist=Object.assign({},setlist,payload.setlist||{});currentSong=Math.max(0,Math.min(songs.length-1,+payload.currentSong||0));currentSection=Math.max(0,+payload.currentSection||0);persist();loadedScoreId='';renderWorshipFull();showCue(uiLanguage==='zh'?'已收到 Host 歌單':'Host setlist received',1,uiLanguage==='zh'?songs.length+' 首歌曲已更新':songs.length+' songs updated',true);}if(payload.type==='SONG_COUNTDOWN')showSongSwitchCountdown(payload.index,payload.count);if(payload.type==='SONG'){clearSongSwitchCountdown();selectSong(payload.index,true);}if(payload.type==='SECTION'){selectSong(payload.index,true);currentSection=Math.max(0,payload.section||0);renderWorshipFull();}if(payload.type==='CUE')showCue(payload.text,payload.tone,payload.subtitle,true);};
-  sync.appState={type:'SONG',index:currentSong,section:currentSection};sync.init(initialRoom);
+  sync.appState={type:'SONG',index:currentSong,section:currentSection};sync.init(initialRoom);sync.restoreCloudRoom();
   updateUI();
   if (wakeToggle.checked) requestWakeLock();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(console.warn);
