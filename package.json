@@ -17,6 +17,7 @@
     "pako": "^2.1.0"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "wrangler": "^4.125.0"
   }
 }
